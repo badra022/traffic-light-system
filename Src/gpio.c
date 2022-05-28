@@ -3,8 +3,7 @@
 /*********** Date		: 24/11/2020			*************/
 /*********** Version	: V01					*************/
 /************************************************************/
-#include "STD_types.h"
-
+#include <stdtypes.h>
 #include "gpio_regs.h"
 #include "gpio.h"
 

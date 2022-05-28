@@ -4,8 +4,8 @@
 /*********** Version	: V01					*************/
 /************************************************************/
 #include "MATH_macros.h"
-#include "STD_types.h"
 #include <math.h>
+#include <stdtypes.h>
 
 #include "gpio.h"
 #include "uart.h"

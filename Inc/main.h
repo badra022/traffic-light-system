@@ -6,7 +6,7 @@
 #ifndef INC_MAIN_H_
 #define INC_MAIN_H_
 
-#include "STD_types.h"
+#include <stdtypes.h>
 #include "MATH_macros.h"
 
 #include "gpio.h"
@@ -14,6 +14,8 @@
 #include "uart.h"
 #include "gpt.h"
 #include "rcc.h"
+#include "systick.h"
+#include "bartos.h"
 
 /*****************************************************************************/
 /***********************    APPLICATION APIs     *****************************/

@@ -57,6 +57,10 @@ typedef enum
 
 #define NULL ((void*)0)
 
+typedef void (* FUNCTION_PTR) (void);
+
+#define INT_MAX		(u32)4000000000
+
 #define	P0		0
 #define	P1		1
 #define	P2		2
@@ -73,6 +77,12 @@ typedef enum
 #define	P13		13
 #define	P14		14
 #define	P15		15
+
+typedef struct function_dtype
+{
+	FUNCTION_PTR function;		/* pointer to the function */
+	void*		args;			/* pointer to function arguments passed to it*/
+}function_dtype;
 
 
 #endif /* STD_TYPE_H_ */

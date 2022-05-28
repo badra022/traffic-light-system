@@ -3,9 +3,8 @@
 /*********** Date		: 7/1/2021				*************/
 /*********** Version	: V02					*************/
 /************************************************************/
+#include <stdtypes.h>
 #include "MATH_macros.h"
-#include "STD_types.h"
-
 #include "rcc.h"
 
 static u32 system_clock = 16000000U;		/* default */

@@ -5,38 +5,57 @@
 /************************************************************/
 #include "main.h"
 
-void APP_toggleLedTaskSetup(void){
-	/* enable TIM clock */
-	RCC_voidEnableClock(RCC_APB1, _TIM2_RCC_ID);
-	/* setup the TIM2 configs */
-	TIM_voidInit(TIM2, DOWNCOUNTING, RCC_u32GetSystemClock());
-	/* enable TIM2 NVIC interrupt */
-	NVIC_voidEnableInterrupt(_TIM2_VECTOR_IRQ);
-	/* set the callback function that will be called inside the interrupt */
-	TIM_voidSetCallBackFunction(TIM2, APP_toggleLed);
-	/* start TIM2 */
-	TIM_voidStartTimer(TIM2);
+void portable_delay_cycles(unsigned long n)
+{
+ 	while (n--)
+ 	{
+ 		asm volatile ("");
+ 	}
 }
 
-void APP_toggleLed(void){
+void toggleLed1(void){
+	while(1){
 	/* toggle led's state */
 	GPIO_TogglePin('G', P13);
+	portable_delay_cycles(8000000);
+	}
 }
 
-void APP_setupIOConfigs(void){
+void toggleLed2(void){
+	while(1){
+	/* toggle led's state */
+	GPIO_TogglePin('G', P14);
+	portable_delay_cycles(8000000);
+	}
+}
+
+void toggleLed3(void){
+	while(1){
+	/* toggle led's state */
+	GPIO_TogglePin('G', P14);
+	portable_delay_cycles(8000000);
+	}
+}
+
+void setupIOConfigs(void){
 	/* setup I/O configs */
 	GPIO_Init('G', P13, OUTPUT, PUSH_PULL, NO_PULLING);
+	GPIO_Init('G', P14, OUTPUT, PUSH_PULL, NO_PULLING);
 }
 
 
 int main(void) {
-	/* setup I/O configs */
-	APP_setupIOConfigs();
-	/* setup tim2 */
-	APP_toggleLedTaskSetup();
-
+	setupIOConfigs();
+	GPIO_WritePin('G', P13, HIGH);
+	GPIO_WritePin('G', P14, HIGH);
+	Bartos_createTask(toggleLed1, 2);
+	Bartos_createTask(toggleLed2, 2);
+	STK_voidInit();
 	while (1) {
-		/* Infinite loop */
+
+		/* start the rtos */
+		Bartos_start();
+//		STK_SetPeriodicFunction(1000000, &toggleLed1_task);		/* 1 sec tick */
 	}
 	return 0;
 }
