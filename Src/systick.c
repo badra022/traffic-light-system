@@ -28,6 +28,8 @@ typedef struct bartos_timer{
 
 static bartosTimer_dtype* curr_timer = NULL;
 static bartosTimer_dtype* head_timer = NULL;
+bartosTimer_dtype timers[MAX_NUMBER_OF_TASKS];
+u8 curr_timer_idx = 0;
 static u32 curr_tick = 0;
 
 
@@ -57,6 +59,7 @@ static ErrorStatus BartosTimer_Register(bartosTimer_dtype* timer_ptr){
 	if(head_timer == NULL){
 		head_timer = timer_ptr;
 		curr_timer = timer_ptr;
+		curr_timer->next_timer = NULL;
 		state = SUCCESS;
 	}
 	else{
@@ -136,9 +139,16 @@ void BartosTimer_TimerTick(void){		/* to be called inside the SysTick_Handler */
 }
 
 void BartosTimer_Delay(u32 u32Ticks){		/* to be called inside any task to suspend it until defined timer ticks pass */
+	__asm("CPSID		I");		/* interrupts are enabled again at the end of context switching */
 	tcb_dtype* curr_tcb_ptr;
-	bartosTimer_dtype* newTimer_ptr = (bartosTimer_dtype*)malloc(sizeof(bartosTimer_dtype));
-
+	if(curr_timer_idx >= 10){
+		curr_timer_idx = curr_timer_idx % 10;
+	}
+	else{
+		/* Do nothing */
+	}
+	bartosTimer_dtype* newTimer_ptr = &timers[curr_timer_idx];
+	curr_timer_idx++;
 	curr_tcb_ptr = Bartos_getCurrentTcb();
 	curr_tcb_ptr->state = SUSPENDED;
 
@@ -150,6 +160,8 @@ void BartosTimer_Delay(u32 u32Ticks){		/* to be called inside any task to suspen
 	Bartos_dequeueTcbEntry(&TcbPtrQueueHead, curr_tcb_ptr);
 	/* register the timer to this callback and this tcb_ptr */
 	BartosTimer_Register(newTimer_ptr);
+	/* manage the ready queue to see which task is running next and load it's context to switch immediately */
+	Bartos_forceContextSwitch();
 }
 
 u32  BartosTimer_u32GetRemainingTicks(void){

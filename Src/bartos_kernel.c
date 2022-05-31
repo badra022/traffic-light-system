@@ -36,15 +36,7 @@ tcb_dtype* Bartos_getCurrentTcb(void){
 }
 
 static void Bartos_idleTask(void){
-	while(1){
-		/* toggle led's state */
-		GPIO_TogglePin('G', P14);
-	 	int n = 1000000;
-		while (n--)
-	 	{
-	 		asm volatile ("");
-	 	}
-	}
+	while(1){}
 }
 
 u8 Bartos_IsStarted(void){
@@ -133,8 +125,9 @@ void Bartos_manageTasks(void){
 				/* see if there is another same priority task to share the timeslicing with */
 				if(Bartos_isQueueTcbPriorityOrHigherExist(&TcbPtrQueueHead, curr_tcb_ptr->priority)){
 					/* switch to this task that have higher or same priority */
+					tcb_dtype* next_tcb_ptr = Bartos_dequeueTcbHead(&TcbPtrQueueHead);
 					Bartos_enqueueTcbPriority(&TcbPtrQueueHead, curr_tcb_ptr);
-					curr_tcb_ptr = Bartos_dequeueTcbHead(&TcbPtrQueueHead);
+					curr_tcb_ptr = next_tcb_ptr;
 				}
 				else{
 					/* if not found, do nothing */
@@ -144,12 +137,18 @@ void Bartos_manageTasks(void){
 	}
 }
 
+void Bartos_forceContextSwitch(void){	/* this function won't be called from interrupt context */
+	__asm("CPSIE I");
+	__asm("SVC   0");
+}
+
 ErrorStatus Bartos_endTask(void){
 	ErrorStatus status = ERROR;
 	curr_tcb_ptr->state = TERMINATED;
 	status = Bartos_dequeueTcbEntry(&TcbPtrQueueHead, curr_tcb_ptr);
-	Bartos_manageTasks();
-	LoadCurrentContext();
+//	Bartos_manageTasks();
+//	LoadCurrentContext();
+	Bartos_forceContextSwitch();
 	return status;
 }
 
@@ -163,7 +162,9 @@ void Bartos_start(void){
 		curr_tcb_ptr = idle_tcb_ptr;
 	}
 	else{
-		curr_tcb_ptr = Bartos_dequeueTcbHead(&TcbPtrQueueHead);
+		tcb_dtype* next_tcb_ptr = Bartos_dequeueTcbHead(&TcbPtrQueueHead);
+		Bartos_enqueueTcbPriority(&TcbPtrQueueHead, curr_tcb_ptr);
+		curr_tcb_ptr = next_tcb_ptr;
 	}
 	LaunchScheduler();
 }
@@ -375,7 +376,6 @@ __attribute__((naked)) void LoadCurrentContext(void)
     __asm("BX      LR");		/* go to our first Task */
 }
 
-
 /* to understand the role of this function you need to know that
  * context switching, which is pushing (R0-R12, LR,PC,PSR) context is done for interrupts only,
  * calling a regular function is not considered a separate context ,
@@ -479,13 +479,85 @@ void SysTick_Handler(void){
 	/* Pop registers R4-R7 */
 	__asm("POP     {R4-R7}");
 
+    /* Return from interrupt */
+    __asm("LDR	   R0, =curr_return_address");
+    __asm("LDR     LR, [R0]");
+
     /* enable interrupts */
 	__asm("CPSIE   I");
+
+	__asm("BX      LR");
+    /* what happens after returning from this exception (interrupt) is that the processor pop R0-R3, R12, LR, PC and PSR
+     from the current pointed stack (we edited it to point to next task's stack) into their original registers
+     PC is also popped among the context so the processor goes to the location of next task pointed by it's PC it just popped
+     we already popped R4-R11. with the automatically popped context (R0-R3, R12, LR, PSR),
+     the context is now complete upon task execution */
+}
+
+
+__attribute__((naked))
+void SVC_Handler(void){
+	/* STEP 1 - SAVE THE CURRENT TASK CONTEXT
+
+	At this point the processor has already pushed PSR, PC, LR, R12, R3, R2, R1 and R0
+	onto the stack. We need to push the rest(i.e R4, R5, R6, R7, R8, R9, R10 & R11) to save the
+	context of the current task. */
+
+    __asm("CPSID		I");				/* Disable interrupts */
+    __asm("PUSH    {R4-R7}");				/* Push registers R4 to R7 */
+
+    /* Push registers R8-R11 through storing them in R4-R7 then pushing R4-R7 into stack */
+    __asm("MOV     R4, R8");
+    __asm("MOV     R5, R9");
+    __asm("MOV     R6, R10");
+    __asm("MOV     R7, R11");
+    __asm("PUSH    {R4-R7}");
+
+    __asm("LDR     R0, =curr_tcb_ptr");	/* load R0 with the address of curr_tcb_ptr (R0 = &curr_tcb_ptr) */
+
+    __asm("LDR     R1, [R0]");			/* Load R1 with the content of curr_tcb_ptr (R1 = *(R0))
+								(i.e post this, R1 will contain the address of current TCB) */
+
+	/* updating current task's stack pointer in it's tcb */
+    __asm("MOV     R4, SP");				/* Move the SP value to R4 */
+    __asm("STR     R4, [R1]");			/* Store the value of the stack pointer(copied in R4) to the stack_ptr element in current task's TCB
+								  This marks an end to saving the context of the current task. */
+    __asm("LDR	   R0, =curr_return_address");
+    __asm("STR     LR, [R0]");
+	/* ------------------------------------------------------------------------------------------------------ */
+
+	Bartos_manageTasks();		/* UPDATE curr_tcb_ptr to point to next task's tcb decided by the scheduler */
+
+	/* ------------------------------------------------------------------------------------------------------
+      STEP 2: LOAD THE NEW TASK CONTEXT FROM ITS STACK TO THE CPU REGISTERS. */
+
+	__asm("LDR     R0, =curr_tcb_ptr");	/* load R0 with the address of curr_tcb_ptr (R0 = &curr_tcb_ptr) */
+
+	__asm("LDR     R1, [R0]");			/* Load R1 with the content of curr_tcb_ptr (R1 = *(R0))
+								 (i.e post this, R1 will contain the address of current TCB) */
+
+    /* Load the newer tasks TCB to the SP using R4. */
+	__asm("LDR     R4, [R1]");
+	__asm("MOV     SP, R4");
+
+    /* Pop registers R8-R11 */
+	__asm("POP     {R4-R7}");
+	__asm("MOV     R8, R4");
+	__asm("MOV     R9, R5");
+	__asm("MOV     R10, R6");
+	__asm("MOV     R11, R7");
+
+	/* Pop registers R4-R7 */
+	__asm("POP     {R4-R7}");
 
     /* Return from interrupt */
     __asm("LDR	   R0, =curr_return_address");
     __asm("LDR     LR, [R0]");
-	__asm("BX      LR");
+
+    /* enable interrupts */
+	__asm("CPSIE   I");
+
+    __asm("BX      LR");
     /* what happens after returning from this exception (interrupt) is that the processor pop R0-R3, R12, LR, PC and PSR
      from the current pointed stack (we edited it to point to next task's stack) into their original registers
      PC is also popped among the context so the processor goes to the location of next task pointed by it's PC it just popped

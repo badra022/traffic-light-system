@@ -9,7 +9,7 @@
 #define INC_BARTOS_H_
 
 #define MAX_NUMBER_OF_TASKS		10
-#define STD_STACK_SIZE			100
+#define STD_STACK_SIZE			500
 
 typedef enum TaskState{
 	RUNNING,
@@ -56,5 +56,6 @@ tcb_dtype* Bartos_dequeueTcbHead(tcb_dtype** TcbPtrQueueHead_ptr);
 
 ErrorStatus Bartos_resumeTask(tcb_dtype* tcb_ptr);
 
+void Bartos_forceContextSwitch(void);
 
 #endif /* INC_BARTOS_H_ */
