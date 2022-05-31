@@ -37,10 +37,10 @@ void setupIOConfigs(void){
 
 int main(void) {
 	setupIOConfigs();
-	GPIO_WritePin('G', P13, HIGH);
-	GPIO_WritePin('G', P14, HIGH);
-	Bartos_createTask(toggleLed1, 2);
-	Bartos_createTask(toggleLed2, 2);
+//	GPIO_WritePin('G', P13, HIGH);
+//	GPIO_WritePin('G', P14, HIGH);
+//	Bartos_createTask(toggleLed1, 1);
+//	Bartos_createTask(toggleLed2, 2);
 	while (1) {
 
 		/* start the rtos */

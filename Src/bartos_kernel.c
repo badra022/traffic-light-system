@@ -36,7 +36,15 @@ tcb_dtype* Bartos_getCurrentTcb(void){
 }
 
 static void Bartos_idleTask(void){
-	while(1){}
+	while(1){
+		/* toggle led's state */
+		GPIO_TogglePin('G', P14);
+	 	int n = 1000000;
+		while (n--)
+	 	{
+	 		asm volatile ("");
+	 	}
+	}
 }
 
 u8 Bartos_IsStarted(void){
@@ -151,7 +159,12 @@ void Bartos_start(void){
 	isStarted = 1;
 	Bartos_createTask(Bartos_idleTask, 255);
 	BartosTimer_Init();
-	curr_tcb_ptr = Bartos_dequeueTcbHead(&TcbPtrQueueHead);
+	if(Bartos_isQueueEmpty(&TcbPtrQueueHead)){
+		curr_tcb_ptr = idle_tcb_ptr;
+	}
+	else{
+		curr_tcb_ptr = Bartos_dequeueTcbHead(&TcbPtrQueueHead);
+	}
 	LaunchScheduler();
 }
 
