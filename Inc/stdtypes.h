@@ -40,8 +40,11 @@ typedef double                float64;
 
 typedef enum
 {
-  SUCCESS = 0U,
-  ERROR = !SUCCESS
+  SUCCESS=0,
+  ERROR=1,
+  ERR_PARAMTERS=2,
+  ERR_TIMEOUT=3,
+  ERR_CONTEXT=4,
 } ErrorStatus;
 
 #ifndef FALSE
@@ -55,9 +58,12 @@ typedef enum
 #define HIGH        (1u)
 #define LOW         (0u)
 
+#ifndef NULL
 #define NULL ((void*)0)
+#endif
 
 typedef void (* FUNCTION_PTR) (void);
+typedef void (* FUNCTION_PTR_VOID_ARGS) (void*);
 
 #define INT_MAX		(u32)4000000000
 
