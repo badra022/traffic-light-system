@@ -11,10 +11,7 @@
 #include "systick.h"
 #include "bartos.h"
 
-#include "gpio.h"
-
-tcb_dtype tcbs[MAX_NUMBER_OF_TASKS];		/* store the physical TCBs for each task in the RAM */
-tcb_dtype* tcbs_ptr[MAX_NUMBER_OF_TASKS];	/* store the addresses of the TCBs of the tasks which are ready in queue order */
+tcb_dtype tcbs[MAX_NUMBER_OF_TASKS] = {0};		/* store the physical TCBs for each task in the RAM */
 
 tcb_dtype* curr_tcb_ptr = NULL;
 
@@ -50,54 +47,59 @@ ErrorStatus Bartos_resumeTask(tcb_dtype* tcb_ptr){
 	return status;
 }
 
-void Bartos_createTask(FUNCTION_PTR task, u8 u8Priority){
-	static u8 task_idx = 0;
-	if(task_idx >= MAX_NUMBER_OF_TASKS){
-		return;
-	}
-	else
-	{
-		/* process to the creation of the Task */
-	}
-	if(task == Bartos_idleTask){
-		tcbs[task_idx].priority = u8Priority;
-		tcbs[task_idx].stack_save_ptr = &tcb_stack[task_idx][STD_STACK_SIZE - 16];
-		tcbs[task_idx].state = READY;
-		tcbs[task_idx].task = task;
-		idle_tcb_ptr = &tcbs[task_idx];
-		if(curr_tcb_ptr == NULL){
-			curr_tcb_ptr = idle_tcb_ptr;
+static u8 Bartos_getNextTcbIndex(void){
+	for(u8 idx = 0; idx < MAX_NUMBER_OF_TASKS; idx++){
+		if(tcbs[idx].state == TERMINATED || tcbs[idx].stack_save_ptr == NULL){
+			return idx;
 		}
-		else{
-			/* Not the first task created, Do nothing */
-		}
-		tcb_stack[task_idx][STD_STACK_SIZE - 1] = 0x01000000;
-		tcb_stack[task_idx][STD_STACK_SIZE - 2] = (u32)task;
 	}
-	else if(curr_tcb_ptr == NULL){
-		tcbs[task_idx].priority = u8Priority;
-		tcbs[task_idx].stack_save_ptr = &tcb_stack[task_idx][STD_STACK_SIZE - 16];
-		tcbs[task_idx].state = READY;
-		tcbs[task_idx].task = task;
-		curr_tcb_ptr = &tcbs[task_idx];
-		tcb_stack[task_idx][STD_STACK_SIZE - 1] = 0x01000000;
-		tcb_stack[task_idx][STD_STACK_SIZE - 2] = (u32)task;
-		/* add the task to ready to run tasks queue */
-		Bartos_enqueueTcbPriority(&TcbPtrQueueHead, &tcbs[task_idx]);
+	return 255;		/* didn't find any space for new Tcb allocation */
+}
 
+void Bartos_createTask(FUNCTION_PTR task, u8 u8Priority){
+	u8 task_idx = Bartos_getNextTcbIndex();
+	if(task_idx == 255){
+		/* Maximum number of tasks (ready and suspended) already created, No more space */
 	}
 	else{
-		tcbs[task_idx].priority = u8Priority;
-		tcbs[task_idx].stack_save_ptr = &tcb_stack[task_idx][STD_STACK_SIZE - 16];
-		tcbs[task_idx].state = READY;
-		tcbs[task_idx].task = task;
-		tcb_stack[task_idx][STD_STACK_SIZE - 1] = 0x01000000;
-		tcb_stack[task_idx][STD_STACK_SIZE - 2] = (u32)task;
-		/* add the task to ready to run tasks queue */
-		Bartos_enqueueTcbPriority(&TcbPtrQueueHead, &tcbs[task_idx]);
-	}
+		if(task == Bartos_idleTask){
+			tcbs[task_idx].priority = u8Priority;
+			tcbs[task_idx].stack_save_ptr = &tcb_stack[task_idx][STD_STACK_SIZE - 16];
+			tcbs[task_idx].state = READY;
+			tcbs[task_idx].task = task;
+			idle_tcb_ptr = &tcbs[task_idx];
+			if(curr_tcb_ptr == NULL){
+				curr_tcb_ptr = idle_tcb_ptr;
+			}
+			else{
+				/* Not the first task created, Do nothing */
+			}
+			tcb_stack[task_idx][STD_STACK_SIZE - 1] = 0x01000000;
+			tcb_stack[task_idx][STD_STACK_SIZE - 2] = (u32)task;
+		}
+		else if(curr_tcb_ptr == NULL){
+			tcbs[task_idx].priority = u8Priority;
+			tcbs[task_idx].stack_save_ptr = &tcb_stack[task_idx][STD_STACK_SIZE - 16];
+			tcbs[task_idx].state = READY;
+			tcbs[task_idx].task = task;
+			curr_tcb_ptr = &tcbs[task_idx];
+			tcb_stack[task_idx][STD_STACK_SIZE - 1] = 0x01000000;
+			tcb_stack[task_idx][STD_STACK_SIZE - 2] = (u32)task;
+			/* add the task to ready to run tasks queue */
+			Bartos_enqueueTcbPriority(&TcbPtrQueueHead, &tcbs[task_idx]);
 
-	task_idx++;
+		}
+		else{
+			tcbs[task_idx].priority = u8Priority;
+			tcbs[task_idx].stack_save_ptr = &tcb_stack[task_idx][STD_STACK_SIZE - 16];
+			tcbs[task_idx].state = READY;
+			tcbs[task_idx].task = task;
+			tcb_stack[task_idx][STD_STACK_SIZE - 1] = 0x01000000;
+			tcb_stack[task_idx][STD_STACK_SIZE - 2] = (u32)task;
+			/* add the task to ready to run tasks queue */
+			Bartos_enqueueTcbPriority(&TcbPtrQueueHead, &tcbs[task_idx]);
+		}
+	}
 }
 
 
@@ -334,46 +336,6 @@ tcb_dtype* Bartos_dequeueTcbHead(tcb_dtype** TcbPtrQueueHead_ptr){
 		dequeued_tcb_ptr->next_tcp_ptr = dequeued_tcb_ptr->prev_tcp_ptr = NULL;
 	}
 	return dequeued_tcb_ptr;
-}
-
-
-__attribute__((naked)) void LoadCurrentContext(void)
-{
-    /* R0 contains the address of curr_tcb_ptr */
-    __asm("LDR     R0, =curr_tcb_ptr");
-
-    /* R2 contains the address in curr_tcb_ptr(value of curr_tcb_ptr) */
-    __asm("LDR     R2, [R0]");
-
-    /* Load the SP register with the stacked SP value */
-    __asm("LDR     R4, [R2]");
-    __asm("MOV     SP, R4");
-
-    /* Pop registers R8-R11 (user saved context) */
-    __asm("POP     {R4-R7}");
-    __asm("MOV     R8, R4");
-    __asm("MOV     R9, R5");
-    __asm("MOV     R10, R6");
-    __asm("MOV     R11, R7");
-    /* Pop registers R4-R7 (user saved context) */
-    __asm("POP     {R4-R7}");
-    /*  Start popping the stacked exception frame. (R0-R3, R12, LR, PC, PSR) */
-    __asm("POP     {R0-R3}");
-    __asm("POP     {R4}");
-    __asm("MOV     R12, R4");
-
-    /* Skip the saved LR */
-    __asm("ADD     SP,SP,#4");
-
-    /* POP the saved PC into LR via R4, We do this to jump into the
-     first task when we execute the branch instruction to exit this routine. */
-    __asm("POP     {R4}");
-    __asm("MOV     LR, R4");
-
-    __asm("ADD     SP,SP,#4");		/* to align the SP at the beginning of the Stack region of the Task */
-
-    __asm("CPSIE   I ");		/* Enable interrupts */
-    __asm("BX      LR");		/* go to our first Task */
 }
 
 /* to understand the role of this function you need to know that
