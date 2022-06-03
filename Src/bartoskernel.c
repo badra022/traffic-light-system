@@ -22,29 +22,55 @@ static u8 isStarted = 0;
 
 /* Forward Declaration */
 __attribute__((naked)) void LaunchScheduler(void);
-static void Bartos_idleTask(void);
-static u8 Bartos_getNextTcbIndex(void);
-static void initTaskStack(u8 index);
-static void Bartos_manageTasks(void);
-static u8 Bartos_isQueueTcbPriorityOrHigherExist(tcb_dtype** TcbPtrQueueHead_ptr, u8 priority);
-static u8 Bartos_isQueueEmpty(tcb_dtype** TcbPtrQueueHead_ptr);
+static void osIdleTask(void);
+static u8 osGetNextTcbIndex(void);
+static void osInitTaskStack(u8 index);
+static void osManageTasks(void);
+static u8 osIsQueueTcbPriorityOrHigherExist(tcb_dtype** TcbPtrQueueHead_ptr, u8 priority);
+static u8 osIsQueueEmpty(tcb_dtype** TcbPtrQueueHead_ptr);
 
-tcb_dtype* Bartos_getCurrentTcb(void){
+/*
+ * \b getCurrentTcb
+ *
+ * @return Pointer to the current tcb on execution
+ */
+tcb_dtype* osGetCurrentTcb(void){
 	return curr_tcb_ptr;
 }
 
-u8 Bartos_IsStarted(void){
+/*
+ * \b osIsStarted
+ *
+ * @retval TRUE started
+ * @retval FALSE not started yet
+ */
+u8 osIsStarted(void){
 	return isStarted;
 }
 
-u8 Bartos_resumeTask(tcb_dtype* tcb_ptr){
+
+/*
+ * \b osResumeTask
+ *
+ * Wakes up any suspended or blocked task passed to it.
+ *
+ * This function is called using delay, semaphore and mutex callback functions
+ * to wake up the task after some event or timeout that was blocked or suspended by them.
+ *
+ * @param[in] Pointer to task's tcb block
+ *
+ * @retval ERR_INVALID_PARAMETER invalid parameter values.
+ * @retval ERR_ENQUEUE couldn't put the task in the ready queue.
+ * @retval OK success
+ */
+u8 osResumeTask(tcb_dtype* tcb_ptr){
 	u8 status;
 	if(tcb_ptr == NULL){
 		status = ERR_INVALID_PARAMETER;
 	}
 	else{
 
-		if(Bartos_enqueueTcbPriority(&TcbPtrQueueHead, tcb_ptr) == OK){
+		if(osEnqueueTcbPriority(&TcbPtrQueueHead, tcb_ptr) == OK){
 			tcb_ptr->state = READY;
 			status = OK;
 		}
@@ -56,8 +82,25 @@ u8 Bartos_resumeTask(tcb_dtype* tcb_ptr){
 }
 
 
-
-u8 Bartos_createTask(FUNCTION_PTR task, u8 priority){
+/*
+ * \b BARTOS_createTask
+ *
+ * Creates the TCB block for the passed task handler(ptr to function) with associated priority.
+ *
+ * This function initiates an TCB block in the array of TCBs to be used for the task handler passed to it
+ * and init the neccessary stack space for that TCB and append the TCB to the ready queue according to it's priority.
+ *
+ * Context switching isn't performed right after creating the task, you must wait for the systick_handler to do it.
+ *
+ * @param[in] task Function handler of the task (pointer to function taking void and returning void)
+ * @param[in] priority The priority of executing this task over other tasks (1 is the highest, 0 is prevented)
+ *
+ * @retval ERR_INVALID_PARAMETER Invalid parameters
+ * @retval ERR_INVALID_ARR_INDEX failed to allocate space for the TCB in TCBs array (max number of TCBs had been reached)
+ * @retval OK success
+ * @retval ERR_FAILED_TO_PERFORM another runtime error happened
+ */
+u8 BARTOS_createTask(FUNCTION_PTR task, u8 priority){
 	u8 status = ERR_FAILED_TO_PERFORM;
 	if(task == NULL){
 		status = ERR_INVALID_PARAMETER;
@@ -66,7 +109,7 @@ u8 Bartos_createTask(FUNCTION_PTR task, u8 priority){
 		status = ERR_INVALID_PARAMETER;
 	}
 	else{
-		u8 task_idx = Bartos_getNextTcbIndex();
+		u8 task_idx = osGetNextTcbIndex();
 		if(task_idx == MAX_UNSIGNED_CHARACTER){
 			status = ERR_INVALID_ARR_INDEX;
 		}
@@ -74,9 +117,9 @@ u8 Bartos_createTask(FUNCTION_PTR task, u8 priority){
 			tcbs[task_idx].priority = priority;
 			tcbs[task_idx].state = READY;
 			tcbs[task_idx].task = task;
-			initTaskStack(task_idx);
+			osInitTaskStack(task_idx);
 			/* add the task to ready to run tasks queue */
-			status = Bartos_enqueueTcbPriority(&TcbPtrQueueHead, &tcbs[task_idx]);
+			status = osEnqueueTcbPriority(&TcbPtrQueueHead, &tcbs[task_idx]);
 		}
 	}
 	return status;
@@ -85,31 +128,81 @@ u8 Bartos_createTask(FUNCTION_PTR task, u8 priority){
 
 
 
-
-void Bartos_forceContextSwitch(void){	/* this function won't be called from interrupt context */
+/*
+ * \b forceContextSwitching
+ *
+ * Performs Context switching upon invocation
+ *
+ * this function re-enables the interrupts and perform SW interrupt using SVC instruction
+ * to trigger supervisor handler (SVC_Handler) that is responsible for saving current context,
+ * calling \b manageTasks to switch the current TCB to the Highest priority next ready up to run TCB and load it's context.
+ *
+ */
+void osForceContextSwitching(void){	/* this function won't be called from interrupt context */
 	CRITICAL_SECTION_END();
 	SVC_INTERRUPT_TRIGGER();
 }
 
-void Bartos_endTask(void){
+/*
+ * \b BARTOS_endTask
+ *
+ * Performs Exit routine for the Task calling it.
+ *
+ * This function make task's TCB at \b TERMINATED state and call \b forceContextSwitching
+ * to switch to the next highest priority task.
+ *
+ */
+void BARTOS_endTask(void){
 	curr_tcb_ptr->state = TERMINATED;
-	Bartos_dequeueTcbEntry(&TcbPtrQueueHead, curr_tcb_ptr);
-	Bartos_forceContextSwitch();
+	osForceContextSwitching();
 }
 
 
-
-void Bartos_start(void){
+/*
+ * \b BARTOS_start
+ *
+ * Starts the RTOS.
+ *
+ * This function sets the \b isStarted flag to TRUE and create an TCB for the internal IDLE task in the rtos,
+ * then call \b BartosTimer_Init to initiate the timer ticks to enable (Systick_Handler) interrupt each tick,
+ * then dequeue the top priority TCB from the ready queue to start execution then call \b LaunchScheduler
+ * to jump into the first Task.
+ *
+ */
+void BARTOS_start(void){
 	isStarted = TRUE;
-	Bartos_createTask(Bartos_idleTask, MAX_TASK_PRIORITY);
-	BartosTimer_Init();
-	curr_tcb_ptr = Bartos_dequeueTcbHead(&TcbPtrQueueHead);
+	BARTOS_createTask(osIdleTask, MAX_TASK_PRIORITY);
+	ostimerInit();
+	curr_tcb_ptr = osDequeueTcbHead(&TcbPtrQueueHead);
 	LaunchScheduler();
 }
 
 
-
-u8 Bartos_enqueueTcbPriority(tcb_dtype** TcbPtrQueueHead_ptr, tcb_dtype* tcb_ptr){
+/*
+ * \b osEnqueueTcbPriority
+ *
+ * Inserts the passed TCB into the ready Queue of TCBs based on it's priority, the head is the highest priority
+ * and tasks are sorted in descending priorities.
+ *
+ * This function inserts th TCB to the queue based on it's priority, the queue is doubly linked-list implemented.
+ * case 1: if the queue is empty (head is NULL), put the TCB as the head
+ * case 2: if the queue has only the head, see if the TCB inserted have higher priority or not, if it's higher it
+ * should be the new head, if it's not it should be the next node after the head.
+ * case 3: if there're more than the head node, loop over the nodes and see which TCB is lower priority than th passed TCB then
+ * put the passed TCB after it.
+ *
+ * if some TCB have the same priority as the passed TCB, it should be inserted after it to preserve FIFO order between
+ * similar priority tasks, first come first out.
+ *
+ * @param[in] TcbPtrQueueHead_ptr Pointer to the Head of the ready Queue
+ * @param[in] tcb_ptr Pointer to the tcb that will be inserted
+ *
+ * @retval ERR_INVALID_PARAMETER invalid parameters
+ * @retval OK success
+ * @retval ERR_FAILED_TO_PERFORM another runtime error
+ *
+ */
+u8 osEnqueueTcbPriority(tcb_dtype** TcbPtrQueueHead_ptr, tcb_dtype* tcb_ptr){
 	u8 status = ERR_FAILED_TO_PERFORM;
 	if(TcbPtrQueueHead_ptr == NULL || tcb_ptr == NULL){	/* invalid parameter */
 		status = ERR_INVALID_PARAMETER;
@@ -117,57 +210,57 @@ u8 Bartos_enqueueTcbPriority(tcb_dtype** TcbPtrQueueHead_ptr, tcb_dtype* tcb_ptr
 	else{
 		if(*TcbPtrQueueHead_ptr == NULL){ /* empty queue */
 			*TcbPtrQueueHead_ptr = tcb_ptr;
-			(*TcbPtrQueueHead_ptr)->next_tcp_ptr = NULL;
-			(*TcbPtrQueueHead_ptr)->prev_tcp_ptr = NULL;
+			(*TcbPtrQueueHead_ptr)->next_tcb_ptr = NULL;
+			(*TcbPtrQueueHead_ptr)->prev_tcb_ptr = NULL;
 			status = OK;
 		}
-		else if((*TcbPtrQueueHead_ptr)->next_tcp_ptr == NULL && (*TcbPtrQueueHead_ptr)->prev_tcp_ptr == NULL){
+		else if((*TcbPtrQueueHead_ptr)->next_tcb_ptr == NULL && (*TcbPtrQueueHead_ptr)->prev_tcb_ptr == NULL){
 			/* there is only the head node */
 			if(tcb_ptr->priority < (*TcbPtrQueueHead_ptr)->priority){	/* this tcb have higher priority than the head */
-				(*TcbPtrQueueHead_ptr)->prev_tcp_ptr = tcb_ptr;
-				(*TcbPtrQueueHead_ptr)->next_tcp_ptr = NULL;
-				tcb_ptr->next_tcp_ptr = *TcbPtrQueueHead_ptr;
-				tcb_ptr->prev_tcp_ptr = NULL;
+				(*TcbPtrQueueHead_ptr)->prev_tcb_ptr = tcb_ptr;
+				(*TcbPtrQueueHead_ptr)->next_tcb_ptr = NULL;
+				tcb_ptr->next_tcb_ptr = *TcbPtrQueueHead_ptr;
+				tcb_ptr->prev_tcb_ptr = NULL;
 				*TcbPtrQueueHead_ptr = tcb_ptr;
 				status = OK;
 			}
 			else{		/* this tcb have lower priority than the current head */
-				(*TcbPtrQueueHead_ptr)->prev_tcp_ptr = NULL;
-				(*TcbPtrQueueHead_ptr)->next_tcp_ptr = tcb_ptr;
-				tcb_ptr->next_tcp_ptr = NULL;
-				tcb_ptr->prev_tcp_ptr = *TcbPtrQueueHead_ptr;
+				(*TcbPtrQueueHead_ptr)->prev_tcb_ptr = NULL;
+				(*TcbPtrQueueHead_ptr)->next_tcb_ptr = tcb_ptr;
+				tcb_ptr->next_tcb_ptr = NULL;
+				tcb_ptr->prev_tcb_ptr = *TcbPtrQueueHead_ptr;
 				status = OK;
 			}
 		}
 		else{
 			if(tcb_ptr->priority < (*TcbPtrQueueHead_ptr)->priority){	/* this tcb have higher priority than the head */
-				(*TcbPtrQueueHead_ptr)->prev_tcp_ptr = tcb_ptr;
-				tcb_ptr->next_tcp_ptr = *TcbPtrQueueHead_ptr;
-				tcb_ptr->prev_tcp_ptr = NULL;
+				(*TcbPtrQueueHead_ptr)->prev_tcb_ptr = tcb_ptr;
+				tcb_ptr->next_tcb_ptr = *TcbPtrQueueHead_ptr;
+				tcb_ptr->prev_tcb_ptr = NULL;
 				*TcbPtrQueueHead_ptr = tcb_ptr;
 				status = OK;
 			}
 			else{
-				tcb_dtype* curr_tcb = (*TcbPtrQueueHead_ptr)->next_tcp_ptr;
+				tcb_dtype* curr_tcb = (*TcbPtrQueueHead_ptr)->next_tcb_ptr;
 				while(curr_tcb){
 					if(tcb_ptr->priority < curr_tcb->priority){
-						tcb_ptr->prev_tcp_ptr = curr_tcb->prev_tcp_ptr;
-						curr_tcb->prev_tcp_ptr->next_tcp_ptr = tcb_ptr;
-						curr_tcb->prev_tcp_ptr = tcb_ptr;
-						tcb_ptr->next_tcp_ptr = curr_tcb;
+						tcb_ptr->prev_tcb_ptr = curr_tcb->prev_tcb_ptr;
+						curr_tcb->prev_tcb_ptr->next_tcb_ptr = tcb_ptr;
+						curr_tcb->prev_tcb_ptr = tcb_ptr;
+						tcb_ptr->next_tcb_ptr = curr_tcb;
 						curr_tcb = NULL;		/* End while loop */
 						status = OK;
 					}
 					else{
-						if(curr_tcb->next_tcp_ptr == NULL){
-							curr_tcb->next_tcp_ptr = tcb_ptr;
-							tcb_ptr->prev_tcp_ptr = curr_tcb;
-							tcb_ptr->next_tcp_ptr = NULL;
+						if(curr_tcb->next_tcb_ptr == NULL){
+							curr_tcb->next_tcb_ptr = tcb_ptr;
+							tcb_ptr->prev_tcb_ptr = curr_tcb;
+							tcb_ptr->next_tcb_ptr = NULL;
 							curr_tcb = NULL;	/* End while loop */
 							status = OK;
 						}
 						else{
-							curr_tcb = curr_tcb->next_tcp_ptr;
+							curr_tcb = curr_tcb->next_tcb_ptr;
 						}
 					}
 				}
@@ -177,7 +270,7 @@ u8 Bartos_enqueueTcbPriority(tcb_dtype** TcbPtrQueueHead_ptr, tcb_dtype* tcb_ptr
 	return status;
 }
 
-u8 Bartos_dequeueTcbEntry(tcb_dtype** TcbPtrQueueHead_ptr, tcb_dtype* tcb_ptr){
+u8 osDequeueTcbEntry(tcb_dtype** TcbPtrQueueHead_ptr, tcb_dtype* tcb_ptr){
 	u8 status = ERR_FAILED_TO_PERFORM;
 	if(TcbPtrQueueHead_ptr == NULL || tcb_ptr == NULL){	/* invalid parameter */
 		status = ERR_INVALID_PARAMETER;
@@ -189,26 +282,26 @@ u8 Bartos_dequeueTcbEntry(tcb_dtype** TcbPtrQueueHead_ptr, tcb_dtype* tcb_ptr){
 		tcb_dtype* curr_tcb_ptr = (*TcbPtrQueueHead_ptr);
 		while(curr_tcb_ptr){
 			if(curr_tcb_ptr == tcb_ptr){
-				if(curr_tcb_ptr->next_tcp_ptr != NULL){
-					curr_tcb_ptr->next_tcp_ptr->prev_tcp_ptr = curr_tcb_ptr->prev_tcp_ptr;
+				if(curr_tcb_ptr->next_tcb_ptr != NULL){
+					curr_tcb_ptr->next_tcb_ptr->prev_tcb_ptr = curr_tcb_ptr->prev_tcb_ptr;
 				}
 				else{
 					/* this is the last tcb in the queue */
 				}
-				if(curr_tcb_ptr->prev_tcp_ptr != NULL){
-					curr_tcb_ptr->prev_tcp_ptr->next_tcp_ptr = curr_tcb_ptr->next_tcp_ptr;
+				if(curr_tcb_ptr->prev_tcb_ptr != NULL){
+					curr_tcb_ptr->prev_tcb_ptr->next_tcb_ptr = curr_tcb_ptr->next_tcb_ptr;
 				}
 				else{
 					/* this is the first (head) tcb in the queue */
 				}
 				if(curr_tcb_ptr == *TcbPtrQueueHead_ptr){
-					*TcbPtrQueueHead_ptr = curr_tcb_ptr->next_tcp_ptr;
+					*TcbPtrQueueHead_ptr = curr_tcb_ptr->next_tcb_ptr;
 				}
 				curr_tcb_ptr = NULL;		/* End while loop */
 				status = OK;
 			}
 			else{
-				curr_tcb_ptr = curr_tcb_ptr->next_tcp_ptr;
+				curr_tcb_ptr = curr_tcb_ptr->next_tcb_ptr;
 			}
 		}
 	}
@@ -217,7 +310,7 @@ u8 Bartos_dequeueTcbEntry(tcb_dtype** TcbPtrQueueHead_ptr, tcb_dtype* tcb_ptr){
 
 
 
-tcb_dtype* Bartos_dequeueTcbHead(tcb_dtype** TcbPtrQueueHead_ptr){
+tcb_dtype* osDequeueTcbHead(tcb_dtype** TcbPtrQueueHead_ptr){
 	tcb_dtype* dequeued_tcb_ptr = NULL;
 	if(TcbPtrQueueHead_ptr == NULL){
 		/* dequeued_tcb_ptr is NULL */
@@ -227,14 +320,14 @@ tcb_dtype* Bartos_dequeueTcbHead(tcb_dtype** TcbPtrQueueHead_ptr){
 	}
 	else{
 		dequeued_tcb_ptr = (*TcbPtrQueueHead_ptr);
-		(*TcbPtrQueueHead_ptr) = (*TcbPtrQueueHead_ptr)->next_tcp_ptr;
+		(*TcbPtrQueueHead_ptr) = (*TcbPtrQueueHead_ptr)->next_tcb_ptr;
 		if(*TcbPtrQueueHead_ptr != NULL){
-			(*TcbPtrQueueHead_ptr)->prev_tcp_ptr = NULL;
+			(*TcbPtrQueueHead_ptr)->prev_tcb_ptr = NULL;
 		}
 		else{
 			/* queue is empty now */
 		}
-		dequeued_tcb_ptr->next_tcp_ptr = dequeued_tcb_ptr->prev_tcp_ptr = NULL;
+		dequeued_tcb_ptr->next_tcb_ptr = dequeued_tcb_ptr->prev_tcb_ptr = NULL;
 	}
 	return dequeued_tcb_ptr;
 }
@@ -317,8 +410,8 @@ void SysTick_Handler(void){
     __asm("STR     LR, [R0]");
 	/* ------------------------------------------------------------------------------------------------------ */
 
-    BartosTimer_TimerTick();
-	Bartos_manageTasks();		/* UPDATE curr_tcb_ptr to point to next task's tcb decided by the scheduler */
+    ostimerTick();
+	osManageTasks();		/* UPDATE curr_tcb_ptr to point to next task's tcb decided by the scheduler */
 
 	/* ------------------------------------------------------------------------------------------------------
       STEP 2: LOAD THE NEW TASK CONTEXT FROM ITS STACK TO THE CPU REGISTERS. */
@@ -388,7 +481,7 @@ void SVC_Handler(void){
     __asm("STR     LR, [R0]");
 	/* ------------------------------------------------------------------------------------------------------ */
 
-	Bartos_manageTasks();		/* UPDATE curr_tcb_ptr to point to next task's tcb decided by the scheduler */
+	osManageTasks();		/* UPDATE curr_tcb_ptr to point to next task's tcb decided by the scheduler */
 
 	/* ------------------------------------------------------------------------------------------------------
       STEP 2: LOAD THE NEW TASK CONTEXT FROM ITS STACK TO THE CPU REGISTERS. */
@@ -427,11 +520,11 @@ void SVC_Handler(void){
 }
 
 
-static void Bartos_idleTask(void){
+static void osIdleTask(void){
 	while(1){}
 }
 
-static u8 Bartos_getNextTcbIndex(void){
+static u8 osGetNextTcbIndex(void){
 	for(u8 idx = 0; idx < MAX_NUMBER_OF_TASKS; idx++){
 		if(tcbs[idx].state == TERMINATED || tcbs[idx].stack_save_ptr == NULL){
 			return idx;
@@ -440,7 +533,7 @@ static u8 Bartos_getNextTcbIndex(void){
 	return MAX_UNSIGNED_CHARACTER;		/* didn't find any space for new Tcb allocation */
 }
 
-static void initTaskStack(u8 index){
+static void osInitTaskStack(u8 index){
 	tcbs[index].stack_save_ptr = &tcb_stack[index][STD_STACK_SIZE - 16];
 	tcb_stack[index][STD_STACK_SIZE - 1] = 0x01000000;
 	tcb_stack[index][STD_STACK_SIZE - 2] = (u32)tcbs[index].task;
@@ -451,19 +544,19 @@ static void initTaskStack(u8 index){
 
 /* this function is called at the systick tick interrupt to amnage the tasks and update curr_tcb_ptr to point to
  * next task's tcb block before context switching */
-static void Bartos_manageTasks(void){
+static void osManageTasks(void){
 	if(curr_tcb_ptr->state != READY){
 		/* switch to this task that have higher or same priority */
 		/* idle is guaranteed to be always in the ready queue and always is ready */
-		curr_tcb_ptr = Bartos_dequeueTcbHead(&TcbPtrQueueHead);
+		curr_tcb_ptr = osDequeueTcbHead(&TcbPtrQueueHead);
 	}
 	else{
-		if(!Bartos_isQueueEmpty(&TcbPtrQueueHead)){
+		if(!osIsQueueEmpty(&TcbPtrQueueHead)){
 			/* see if there is another same priority task to share the timeslicing with */
-			if(Bartos_isQueueTcbPriorityOrHigherExist(&TcbPtrQueueHead, curr_tcb_ptr->priority)){
+			if(osIsQueueTcbPriorityOrHigherExist(&TcbPtrQueueHead, curr_tcb_ptr->priority)){
 				/* switch to this task that have higher or same priority */
-				tcb_dtype* next_tcb_ptr = Bartos_dequeueTcbHead(&TcbPtrQueueHead);
-				Bartos_enqueueTcbPriority(&TcbPtrQueueHead, curr_tcb_ptr);
+				tcb_dtype* next_tcb_ptr = osDequeueTcbHead(&TcbPtrQueueHead);
+				osEnqueueTcbPriority(&TcbPtrQueueHead, curr_tcb_ptr);
 				curr_tcb_ptr = next_tcb_ptr;
 			}
 			else{
@@ -473,11 +566,11 @@ static void Bartos_manageTasks(void){
 	}
 }
 
-static u8 Bartos_isQueueEmpty(tcb_dtype** TcbPtrQueueHead_ptr){
+static u8 osIsQueueEmpty(tcb_dtype** TcbPtrQueueHead_ptr){
 	return ((*TcbPtrQueueHead_ptr) == NULL);
 }
 
-static u8 Bartos_isQueueTcbPriorityOrHigherExist(tcb_dtype** TcbPtrQueueHead_ptr, u8 priority){
+static u8 osIsQueueTcbPriorityOrHigherExist(tcb_dtype** TcbPtrQueueHead_ptr, u8 priority){
 	u8 status = FALSE;
 	if(TcbPtrQueueHead_ptr == NULL){	/* invalid parameter */
 			status = ERR_INVALID_PARAMETER;

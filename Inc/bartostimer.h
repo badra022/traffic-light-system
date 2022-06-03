@@ -15,8 +15,8 @@
 /************************************************************/
 /*						FUNCTION PROTOTYPES					*/
 /************************************************************/
-u8 BartosTimer_Init(void);
-void BartosTimer_Delay(u32 u32Ticks);
-void BartosTimer_TimerTick(void);
+u8 ostimerInit(void);
+void BARTOS_delayTask(u32 u32Ticks);
+void ostimerTick(void);
 
 #endif	/* _BARTOS_TIMER_H_ */

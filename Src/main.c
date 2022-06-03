@@ -5,19 +5,11 @@
 /************************************************************/
 #include "main.h"
 
-void portable_delay_cycles(unsigned long n)
-{
- 	while (n--)
- 	{
- 		asm volatile ("");
- 	}
-}
-
 void toggleLed1(void){
 	while(1){
 	/* toggle led's state */
 	GPIO_TogglePin('G', P13);
-	BartosTimer_Delay(1000);
+	BARTOS_delayTask(1000);
 	}
 }
 
@@ -25,7 +17,7 @@ void toggleLed2(void){
 	while(1){
 	/* toggle led's state */
 	GPIO_TogglePin('G', P14);
-	BartosTimer_Delay(1000);
+	BARTOS_delayTask(1000);
 	}
 }
 
@@ -39,12 +31,12 @@ int main(void) {
 	setupIOConfigs();
 	GPIO_WritePin('G', P13, HIGH);
 	GPIO_WritePin('G', P14, HIGH);
-	Bartos_createTask(toggleLed1, 1);
-	Bartos_createTask(toggleLed2, 2);
+	BARTOS_createTask(toggleLed1, 1);
+	BARTOS_createTask(toggleLed2, 2);
 	while (1) {
 
 		/* start the rtos */
-		Bartos_start();
+		BARTOS_start();
 	}
 	return 0;
 }

@@ -37,7 +37,7 @@ static u32 curr_tick = 0;
 /*						FUNCTION DEFINITIONS				*/
 /************************************************************/
 
-u8 BartosTimer_Init(void){
+u8 ostimerInit(void){
 	/* choose the clock and enable the peripheral's interrupt */
 	SysTick->CTRL = CLOCK_SOURCE | 0x02;
 	u32 timer_u32Ticks = (1000000U)/SYSTEM_TICKS_PER_SEC;
@@ -53,7 +53,7 @@ u8 BartosTimer_Init(void){
 	return OK;
 }
 
-static u8 BartosTimer_Register(bartosTimer_dtype* timer_ptr){
+static u8 ostimerRegister(bartosTimer_dtype* timer_ptr){
 	u8 status;
 	if(head_timer == NULL){
 		head_timer = timer_ptr;
@@ -71,7 +71,7 @@ static u8 BartosTimer_Register(bartosTimer_dtype* timer_ptr){
 	return status;
 }
 
-static u8 BartosTimer_Cancel(bartosTimer_dtype* timer_ptr){
+static u8 ostimerCancel(bartosTimer_dtype* timer_ptr){
 	u8 status = ERROR;
 	if(head_timer == NULL){
 		status = ERROR;
@@ -79,7 +79,6 @@ static u8 BartosTimer_Cancel(bartosTimer_dtype* timer_ptr){
 	else if(head_timer->next_timer == NULL){
 		if(head_timer == timer_ptr){
 			head_timer = NULL;
-			free(timer_ptr);
 			status = OK;
 		}
 		else{
@@ -112,32 +111,32 @@ static u8 BartosTimer_Cancel(bartosTimer_dtype* timer_ptr){
 	return status;
 }
 
-static void delayCallBack(void* tcb_void_ptr){
+static void osDelayCallBack(void* tcb_void_ptr){
 	/* if the ticks expire, add the tcb to the ready queue */
 	tcb_dtype* tcb_ptr = (tcb_dtype*)tcb_void_ptr;
-	Bartos_resumeTask(tcb_ptr);
+	osResumeTask(tcb_ptr);
 }
 
-static void BartosTimer_ManageCallBacks(){
+static void ostimerManageCallBacks(){
 	bartosTimer_dtype* curr_timer = head_timer;
 	while(curr_timer != NULL){
 		curr_timer->u32Ticks--;
 		if(curr_timer->u32Ticks == 0){
 			curr_timer->function_ptr(curr_timer->callback_args);
-			BartosTimer_Cancel(curr_timer);
+			ostimerCancel(curr_timer);
 		}
 		curr_timer = curr_timer->next_timer;
 	}
 }
 
-void BartosTimer_TimerTick(void){		/* to be called inside the SysTick_Handler */
-	if(Bartos_IsStarted()){
+void ostimerTick(void){		/* to be called inside the SysTick_Handler */
+	if(osIsStarted()){
 		curr_tick = curr_tick + 1;
-		BartosTimer_ManageCallBacks();
+		ostimerManageCallBacks();
 	}
 }
 
-void BartosTimer_Delay(u32 u32Ticks){		/* to be called inside any task to suspend it until defined timer ticks pass */
+void BARTOS_delayTask(u32 u32Ticks){		/* to be called inside any task to suspend it until defined timer ticks pass */
 	__asm("CPSID		I");		/* interrupts are enabled again at the end of context switching */
 	tcb_dtype* curr_tcb_ptr;
 	if(curr_timer_idx >= 10){
@@ -148,15 +147,15 @@ void BartosTimer_Delay(u32 u32Ticks){		/* to be called inside any task to suspen
 	}
 	bartosTimer_dtype* newTimer_ptr = &timers[curr_timer_idx];
 	curr_timer_idx++;
-	curr_tcb_ptr = Bartos_getCurrentTcb();
+	curr_tcb_ptr = osGetCurrentTcb();
 	curr_tcb_ptr->state = SUSPENDED;
 
-	newTimer_ptr->function_ptr = delayCallBack;
+	newTimer_ptr->function_ptr = osDelayCallBack;
 	newTimer_ptr->callback_args = (void*)curr_tcb_ptr;
 	newTimer_ptr->u32Ticks = u32Ticks;
 
 	/* register the timer to this callback and this tcb_ptr */
-	BartosTimer_Register(newTimer_ptr);
+	ostimerRegister(newTimer_ptr);
 	/* manage the ready queue to see which task is running next and load it's context to switch immediately */
-	Bartos_forceContextSwitch();
+	osForceContextSwitching();
 }
