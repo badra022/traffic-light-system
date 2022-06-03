@@ -10,6 +10,7 @@ void toggleLed1(void){
 	/* toggle led's state */
 	GPIO_TogglePin('G', P13);
 	BARTOS_delayTask(1000);
+	BARTOS_endTask();
 	}
 }
 
