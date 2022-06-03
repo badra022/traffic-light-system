@@ -3,9 +3,13 @@
 /*********** Date		: 24/11/2020			*************/
 /*********** Version	: V01					*************/
 /************************************************************/
-#include <stdtypes.h>
-#include "gpio_regs.h"
+#include "stdtypes.h"
+#include "macros.h"
+#include "port.h"
+
+#include "gpio_private.h"
 #include "gpio.h"
+
 
 
 

@@ -10,8 +10,7 @@
 #ifndef INC_DMA_H_
 #define INC_DMA_H_
 
-#define DMA1_BASE_ADDRESS		0x40026000
-#define DMA2_BASE_ADDRESS		0x40026400
+
 
 #define _DMA2_STREAM0_VECTOR_IRQ		56
 #define _DMA2_STREAM1_VECTOR_IRQ		57
@@ -21,21 +20,6 @@
 #define _DMA2_STREAM5_VECTOR_IRQ		68
 #define _DMA2_STREAM6_VECTOR_IRQ		69
 #define _DMA2_STREAM7_VECTOR_IRQ		70
-
-typedef struct{
-	u32 CR;
-	u32 NDTR;
-	u32 PAR;
-	u32 M0AR;
-	u32 M1AR;
-	u32 FCR;
-}streamRegisters_dtype;
-
-typedef struct{
-	u16 ISR[4];
-	u16 IFCR[4];
-	streamRegisters_dtype S[8];
-}DMA_dtype;
 
 #define DMA1		((DMA_dtype*)(DMA1_BASE_ADDRESS))
 #define DMA2		((DMA_dtype*)(DMA2_BASE_ADDRESS))
@@ -130,7 +114,7 @@ typedef enum{
 /*						FUNCTION PROTOTYPES					*/
 /************************************************************/
 void DMA_voidInit(DMA_dtype* DMA_ptr);
-ErrorStatus DMA_voidConfigureStream(DMA_dtype* DMA_ptr, u8 stream_idx, streamCofig_dtype* streamConfig_ptr);
+u8 DMA_voidConfigureStream(DMA_dtype* DMA_ptr, u8 stream_idx, streamCofig_dtype* streamConfig_ptr);
 void DMA_voidStartTransfer(DMA_dtype* DMA_ptr, u8 stream_idx);
 transferState_dtype DMA_transferState(DMA_dtype* DMA_ptr, u8 stream_idx);
 

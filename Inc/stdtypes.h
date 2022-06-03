@@ -38,14 +38,19 @@ typedef double                float64;
 #define ENABLE        (1u)
 #endif
 
-typedef enum
-{
-  SUCCESS=0,
-  ERROR=1,
-  ERR_PARAMTERS=2,
-  ERR_TIMEOUT=3,
-  ERR_CONTEXT=4,
-} ErrorStatus;
+#define OK		0
+#define ERROR	1
+#define ERR_INVALID_PARAMETER		2
+#define ERR_INVALID_ARR_INDEX				15
+#define ERR_ENQUEUE					20
+#define ERR_DEQUEUE					21
+#define ERR_EMPTY_QUEUE				22
+#define ERR_FAILED_TO_PERFORM		50
+
+
+#define MAX_UNSIGNED_CHARACTER		(u8)(~0)
+#define MAX_UNSIGNED_SHORT			(u16)(~0)
+#define MAX_UNSIGNED_LONG			(u32)(~0)
 
 #ifndef FALSE
 #define FALSE       (0u)

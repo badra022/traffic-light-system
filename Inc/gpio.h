@@ -26,7 +26,9 @@ typedef enum{
 }AF_dtype;
 
 //write result
+#ifndef OK
 #define OK  ((unsigned char)0)
+#endif
 #define NOK ((unsigned char)1)
 
 //mode types

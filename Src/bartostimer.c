@@ -8,13 +8,14 @@
 /************************************************************/
 /*							INCLUDES						*/
 /************************************************************/
-#include"MATH_macros.h"
 #include "stdtypes.h"
+#include "macros.h"
+#include "port.h"
 #include <stdlib.h>
 
-#include "systick.h"
-#include "systick_private.h"
+#include "bartos_config.h"
 #include "bartos.h"
+#include "bartostimer.h"
 
 /* options: AHB_DIV_8, AHB */
 #define CLOCK_SOURCE				AHB_DIV_8
@@ -28,17 +29,15 @@ typedef struct bartos_timer{
 
 static bartosTimer_dtype* curr_timer = NULL;
 static bartosTimer_dtype* head_timer = NULL;
-bartosTimer_dtype timers[MAX_NUMBER_OF_TASKS];
+bartosTimer_dtype timers[MAX_NUMBER_OF_TASKS] = {0};
 u8 curr_timer_idx = 0;
 static u32 curr_tick = 0;
-
-
 
 /************************************************************/
 /*						FUNCTION DEFINITIONS				*/
 /************************************************************/
 
-ErrorStatus BartosTimer_Init(void){
+u8 BartosTimer_Init(void){
 	/* choose the clock and enable the peripheral's interrupt */
 	SysTick->CTRL = CLOCK_SOURCE | 0x02;
 	u32 timer_u32Ticks = (1000000U)/SYSTEM_TICKS_PER_SEC;
@@ -51,47 +50,47 @@ ErrorStatus BartosTimer_Init(void){
 	/* start the count down */
 	SysTick->CTRL |= 0x01;
 
-	return SUCCESS;
+	return OK;
 }
 
-static ErrorStatus BartosTimer_Register(bartosTimer_dtype* timer_ptr){
-	ErrorStatus state;
+static u8 BartosTimer_Register(bartosTimer_dtype* timer_ptr){
+	u8 status;
 	if(head_timer == NULL){
 		head_timer = timer_ptr;
 		curr_timer = timer_ptr;
 		curr_timer->next_timer = NULL;
-		state = SUCCESS;
+		status = OK;
 	}
 	else{
 		curr_timer->next_timer = timer_ptr;
 		curr_timer = timer_ptr;
 		curr_timer->next_timer = NULL;
-		state = SUCCESS;
+		status = OK;
 	}
 
-	return state;
+	return status;
 }
 
-static ErrorStatus BartosTimer_Cancel(bartosTimer_dtype* timer_ptr){
-	ErrorStatus state = ERROR;
+static u8 BartosTimer_Cancel(bartosTimer_dtype* timer_ptr){
+	u8 status = ERROR;
 	if(head_timer == NULL){
-		state = ERROR;
+		status = ERROR;
 	}
 	else if(head_timer->next_timer == NULL){
 		if(head_timer == timer_ptr){
 			head_timer = NULL;
 			free(timer_ptr);
-			state = SUCCESS;
+			status = OK;
 		}
 		else{
 			/* the timer does not exist in the linked-list of bartos timers */
-			state = ERROR;
+			status = ERROR;
 		}
 	}
 	else{
 		if(head_timer == timer_ptr){
 			head_timer = head_timer->next_timer;
-			state = ERROR;
+			status = ERROR;
 		}
 		else{
 			bartosTimer_dtype* prev_timer = head_timer;
@@ -100,7 +99,7 @@ static ErrorStatus BartosTimer_Cancel(bartosTimer_dtype* timer_ptr){
 				if(curr_timer == timer_ptr){
 					prev_timer->next_timer = curr_timer->next_timer;
 					free(timer_ptr);
-					state = SUCCESS;
+					status = OK;
 				}
 				else{
 					prev_timer = curr_timer;
@@ -110,7 +109,7 @@ static ErrorStatus BartosTimer_Cancel(bartosTimer_dtype* timer_ptr){
 		}
 	}
 
-	return state;
+	return status;
 }
 
 static void delayCallBack(void* tcb_void_ptr){
@@ -156,19 +155,8 @@ void BartosTimer_Delay(u32 u32Ticks){		/* to be called inside any task to suspen
 	newTimer_ptr->callback_args = (void*)curr_tcb_ptr;
 	newTimer_ptr->u32Ticks = u32Ticks;
 
-	/* remove the tcb from ready queue */
-	Bartos_dequeueTcbEntry(&TcbPtrQueueHead, curr_tcb_ptr);
 	/* register the timer to this callback and this tcb_ptr */
 	BartosTimer_Register(newTimer_ptr);
 	/* manage the ready queue to see which task is running next and load it's context to switch immediately */
 	Bartos_forceContextSwitch();
 }
-
-u32  BartosTimer_u32GetRemainingTicks(void){
-	return (SYSTEM_TICKS_PER_SEC - curr_tick);
-}
-
-u32  BartosTimer_u32GetElapsedTicks(void){
-	return curr_tick;
-}
-

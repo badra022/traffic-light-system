@@ -3,13 +3,14 @@
 /*********** Date		: 4/1/2021				*************/
 /*********** Version	: V01					*************/
 /************************************************************/
-#include "MATH_macros.h"
+#include "stdtypes.h"
+#include "macros.h"
+#include "port.h"
 #include <math.h>
-#include <stdtypes.h>
 
 #include "gpio.h"
+#include "uart_config.h"
 #include "uart.h"
-
 
 /************************************************************/
 /*						FUNCTION DEFINITIONS				*/

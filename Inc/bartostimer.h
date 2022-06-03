@@ -8,19 +8,15 @@
 /************************************************************/
 /*			GUARD FILE TO PREVENT MULTIPLE INCLUSION		*/
 /************************************************************/
-#ifndef _SYSTICK_INTERFACE_H_
-#define _SYSTICK_INTERFACE_H_
+#ifndef _BARTOS_TIMER_H_
+#define _BARTOS_TIMER_H_
 
 
-
-#define SYSTEM_TICKS_PER_SEC		1000
 /************************************************************/
 /*						FUNCTION PROTOTYPES					*/
 /************************************************************/
-ErrorStatus BartosTimer_Init(void);
+u8 BartosTimer_Init(void);
 void BartosTimer_Delay(u32 u32Ticks);
-u32  BartosTimer_u32GetRemainingTicks(void);
-u32  BartosTimer_u32GetElapsedTicks(void);
 void BartosTimer_TimerTick(void);
 
-#endif
+#endif	/* _BARTOS_TIMER_H_ */

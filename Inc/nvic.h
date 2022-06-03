@@ -10,21 +10,6 @@
 #ifndef	_NVIC_INTERFACE_H_
 #define	_NVIC_INTERFACE_H_
 
-/* 0xE000E100 Base address */
-
-#define NVIC_PERIPHERAL_BASE	0xE000E100
-
-typedef struct{
-	u32 ISER[128];
-	u32 ICER[128];
-	u32 ISPR[128];
-	u32 ICPR[128];
-	u32 IABR[128];
-	u32 RESERVED[128];
-	u8 IPR;
-}NVIC_dtype;
-
-#define NVIC		((volatile NVIC_dtype*)(NVIC_PERIPHERAL_BASE))
 
 /************************************************************/
 /*						FUNCTION PROTOTYPES					*/

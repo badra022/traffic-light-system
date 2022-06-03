@@ -3,12 +3,12 @@
 /*********** Date		: 5/1/2021				*************/
 /*********** Version	: V01					*************/
 /************************************************************/
-#include <stdtypes.h>
-#include "MATH_macros.h"
-#include "rcc.h"
-#include "dma.h"
 
-#define RCC_AHB1ENR		*((volatile u32*)(0x40023800 + 0x30))
+#include "stdtypes.h"
+#include "macros.h"
+#include "port.h"
+
+#include "dma.h"
 
 /************************************************************/
 /*						FUNCTION DEFINITIONS				*/
@@ -23,7 +23,7 @@ void DMA_voidInit(DMA_dtype* DMA_ptr){
 }
 
 
-ErrorStatus DMA_voidConfigureStream(DMA_dtype* DMA_ptr, u8 stream_idx, streamCofig_dtype* streamConfig_ptr){
+u8 DMA_voidConfigureStream(DMA_dtype* DMA_ptr, u8 stream_idx, streamCofig_dtype* streamConfig_ptr){
 	if(stream_idx > 7){
 		return ERROR;
 	}
@@ -147,7 +147,7 @@ ErrorStatus DMA_voidConfigureStream(DMA_dtype* DMA_ptr, u8 stream_idx, streamCof
 		DMA_ptr->S[stream_idx].M0AR = streamConfig_ptr->dest_address;
 	}
 
-	return SUCCESS;
+	return OK;
 }
 
 

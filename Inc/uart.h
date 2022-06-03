@@ -10,39 +10,7 @@
 #ifndef INC_UART_H_
 #define INC_UART_H_
 
-#define BAUDRATE		9600
 
-
-#define USART1_BASE_ADDRESS			0x40011000
-#define USART2_BASE_ADDRESS			0x40004400
-#define USART6_BASE_ADDRESS			0x40011400
-
-#define USART1_SR		*((volatile u32*)(USART1_BASE_ADDRESS + 0x00))
-#define USART1_DR		*((volatile u32*)(USART1_BASE_ADDRESS + 0x04))
-#define USART1_BRR		*((volatile u32*)(USART1_BASE_ADDRESS + 0x08))
-#define USART1_CR1		*((volatile u32*)(USART1_BASE_ADDRESS + 0x0C))
-#define USART1_CR2		*((volatile u32*)(USART1_BASE_ADDRESS + 0x10))
-#define USART1_CR3		*((volatile u32*)(USART1_BASE_ADDRESS + 0x14))
-#define USART1_GTPR		*((volatile u32*)(USART1_BASE_ADDRESS + 0x18))
-
-#define USART2_SR		*((volatile u32*)(USART2_BASE_ADDRESS + 0x00))
-#define USART2_DR		*((volatile u32*)(USART2_BASE_ADDRESS + 0x04))
-#define USART2_BRR		*((volatile u32*)(USART2_BASE_ADDRESS + 0x08))
-#define USART2_CR1		*((volatile u32*)(USART2_BASE_ADDRESS + 0x0C))
-#define USART2_CR2		*((volatile u32*)(USART2_BASE_ADDRESS + 0x10))
-#define USART2_CR3		*((volatile u32*)(USART2_BASE_ADDRESS + 0x14))
-#define USART2_GTPR		*((volatile u32*)(USART2_BASE_ADDRESS + 0x18))
-
-#define USART6_SR		*((volatile u32*)(USART6_BASE_ADDRESS + 0x00))
-#define USART6_DR		*((volatile u32*)(USART6_BASE_ADDRESS + 0x04))
-#define USART6_BRR		*((volatile u32*)(USART6_BASE_ADDRESS + 0x08))
-#define USART6_CR1		*((volatile u32*)(USART6_BASE_ADDRESS + 0x0C))
-#define USART6_CR2		*((volatile u32*)(USART6_BASE_ADDRESS + 0x10))
-#define USART6_CR3		*((volatile u32*)(USART6_BASE_ADDRESS + 0x14))
-#define USART6_GTPR		*((volatile u32*)(USART6_BASE_ADDRESS + 0x18))
-
-#define RCC_APB2ENR		*((volatile u32*)(0x40023800 + 0x44))
-#define RCC_APB1ENR		*((volatile u32*)(0x40023800 + 0x40))
 
 typedef enum{
 	EIGHT,
