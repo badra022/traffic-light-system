@@ -14,36 +14,47 @@
 #include "bartos_config.h"
 #include "bartos.h"
 #include "bartostimer.h"
-#include "binarysemphr.h"
-
+#include <semphr.h>
 
 /* forward Declaration */
-static void osBinarySemphrBlockTask(binarySemphrHandle_dtype semphr_handle, u32 ticks);
+static void osBinarySemphrBlockTask(semphrHandler_dtype semphr_handle, u32 ticks);
 
-
-
-binarySemphrHandle_dtype BARTOS_createBinarySemaphore(void){
-	binarySemphrHandle_dtype handle = (binarySemphrHandle_dtype)malloc(sizeof(binarySemphr_dtype));
+semphrHandler_dtype BARTOS_createBinarySemaphore(void){
+	semphrHandler_dtype handle = (semphrHandler_dtype)malloc(sizeof(semphr_dtype));
 	if(handle == NULL){
 		/* failed to create the semaphore in heap */
 	}
 	else{
-		handle->state = TRUE;
+		handle->count = 1;
+		handle->maxCount = 1;
+		handle->tcbBlockQueue = NULL;
+	}
+	return handle;
+}
+
+semphrHandler_dtype BARTOS_createCountingSemaphore(u8 count, u8 maxCount){
+	semphrHandler_dtype handle = (semphrHandler_dtype)malloc(sizeof(semphr_dtype));
+	if(handle == NULL){
+		/* failed to create the semaphore in heap */
+	}
+	else{
+		handle->count = count;
+		handle->maxCount = maxCount;
 		handle->tcbBlockQueue = NULL;
 	}
 	return handle;
 }
 
 
-u8 BARTOS_semaphoreGet(binarySemphrHandle_dtype handle, u32 timeout){
+u8 BARTOS_semaphoreGet(semphrHandler_dtype handle, u32 timeout){
 	CRITICAL_SECTION_START();
 	tcb_dtype* curr_tcb_ptr = osGetCurrentTcb();
 	if(handle == NULL){
 		/*   */
 	}
 	else{
-		if(handle->state == TRUE){
-			handle->state = FALSE;
+		if(handle->count != 0){
+			handle->count--;
 			return TRUE;
 		}
 		else{
@@ -68,21 +79,21 @@ u8 BARTOS_semaphoreGet(binarySemphrHandle_dtype handle, u32 timeout){
 }
 
 
-u8 BARTOS_semaphorePut(binarySemphrHandle_dtype handle){
+u8 BARTOS_semaphorePut(semphrHandler_dtype handle){
 
 	CRITICAL_SECTION_START();
 	u8 status;
 	if(handle == NULL){
 		status = ERR_INVALID_PARAMETER;
 	}
-	else if(handle->state == TRUE){
+	else if(handle->count == handle->maxCount){
 		status = ERR_INVALID_PARAMETER;
 	}
 	else{
 		/* make state = TRUE and get the next task ready from the suspend Queue */
 		tcb_dtype* next_tcb_ptr = osDequeueTcbHead(&(handle->tcbBlockQueue));
 		if(next_tcb_ptr == NULL){
-			handle->state = TRUE;
+			handle->count++;
 		}
 		else{
 			next_tcb_ptr->semphr_get_status = TRUE;
@@ -108,14 +119,14 @@ static void osBlockCallBack(void* tcb_void_ptr){
 	/* if the ticks expire, add the tcb to the ready queue */
 	/* remove the tcb from the blocking queue of the suspending semaphore */
 	tcb_dtype* tcb_ptr = (tcb_dtype*)tcb_void_ptr;
-	binarySemphrHandle_dtype semphr_handle = (binarySemphrHandle_dtype)(tcb_ptr->blocking_semphr_handle);
+	semphrHandler_dtype semphr_handle = (semphrHandler_dtype)(tcb_ptr->blocking_semphr_handle);
 	osDequeueTcbEntry(&(semphr_handle->tcbBlockQueue), tcb_ptr);
 	tcb_ptr->semphr_get_status = FALSE;
 	tcb_ptr->blocking_semphr_handle = NULL;
 	osResumeTask(tcb_ptr);
 }
 
-static void osBinarySemphrBlockTask(binarySemphrHandle_dtype semphr_handle, u32 ticks){		/* to be called inside any task to suspend it until defined timer ticks pass */
+static void osBinarySemphrBlockTask(semphrHandler_dtype semphr_handle, u32 ticks){		/* to be called inside any task to suspend it until defined timer ticks pass */
 	CRITICAL_SECTION_START();
 	tcb_dtype* curr_tcb_ptr;
 	if(curr_timer_idx >= 10){

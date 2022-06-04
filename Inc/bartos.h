@@ -42,7 +42,7 @@ u8 osDequeueTcbEntry(tcb_dtype** TcbPtrQueueHead_ptr, tcb_dtype* tcb_ptr);
 tcb_dtype* osDequeueTcbHead(tcb_dtype** TcbPtrQueueHead_ptr);
 
 #include "bartostimer.h"
-#include "binarysemphr.h"
+#include <semphr.h>
 
 
 #endif /* INC_BARTOS_H_ */

@@ -5,7 +5,7 @@
 /************************************************************/
 #include "main.h"
 
-binarySemphrHandle_dtype semphr1 = NULL;
+semphrHandler_dtype semphr1 = NULL;
 
 void toggleLed1(void){
 	while(1){
@@ -47,7 +47,7 @@ int main(void) {
 	setupIOConfigs();
 	GPIO_WritePin('G', P13, HIGH);
 	GPIO_WritePin('G', P14, HIGH);
-	semphr1 = BARTOS_createBinarySemaphore();
+	semphr1 = BARTOS_createCountingSemaphore(1, 1);
 	BARTOS_createTask(toggleLed1, 2);
 	BARTOS_createTask(toggleLed2, 2);
 	while (1) {
