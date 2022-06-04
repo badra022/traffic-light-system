@@ -10,7 +10,6 @@
 #include "macros.h"
 
 #include "bartos.h"
-#include "bartostimer.h"
 #include "gpio.h"
 #include "gpt.h"
 #include "nvic.h"

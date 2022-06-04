@@ -18,11 +18,14 @@ typedef enum TaskState{
 
 typedef struct Tcb{
 	u32* 			stack_save_ptr;
-	struct Tcb* 		next_tcb_ptr;
-	struct Tcb* 		prev_tcb_ptr;
+	struct Tcb* 	next_tcb_ptr;
+	struct Tcb* 	prev_tcb_ptr;
 	FUNCTION_PTR	task;
 	u8				priority;
 	taskState_dtype	state;
+	u32*			blocking_semphr_handle;
+	u8				semphr_get_status;
+	u32*			timer_handler;
 }tcb_dtype;
 
 extern tcb_dtype* TcbPtrQueueHead;
@@ -37,6 +40,9 @@ void BARTOS_start(void);
 u8 osEnqueueTcbPriority(tcb_dtype** TcbPtrQueueHead_ptr, tcb_dtype* tcb_ptr);
 u8 osDequeueTcbEntry(tcb_dtype** TcbPtrQueueHead_ptr, tcb_dtype* tcb_ptr);
 tcb_dtype* osDequeueTcbHead(tcb_dtype** TcbPtrQueueHead_ptr);
+
+#include "bartostimer.h"
+#include "binarysemphr.h"
 
 
 #endif /* INC_BARTOS_H_ */

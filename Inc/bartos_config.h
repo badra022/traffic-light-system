@@ -16,4 +16,8 @@
 
 #define MAX_TASK_PRIORITY		255
 
+/* options: AHB_DIV_8, AHB */
+#define CLOCK_SOURCE				AHB_DIV_8
+
+
 #endif /* INC_BARTOS_CONFIG_H_ */

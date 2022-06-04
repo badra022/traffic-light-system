@@ -17,15 +17,9 @@
 #include "bartos.h"
 #include "bartostimer.h"
 
-/* options: AHB_DIV_8, AHB */
-#define CLOCK_SOURCE				AHB_DIV_8
 
-typedef struct bartos_timer{
-	FUNCTION_PTR_VOID_ARGS		function_ptr;
-	u32					u32Ticks;
-	void*				callback_args;
-	struct bartos_timer* next_timer;
-}bartosTimer_dtype;
+
+
 
 static bartosTimer_dtype* curr_timer = NULL;
 static bartosTimer_dtype* head_timer = NULL;
@@ -53,7 +47,7 @@ u8 ostimerInit(void){
 	return OK;
 }
 
-static u8 ostimerRegister(bartosTimer_dtype* timer_ptr){
+u8 ostimerRegister(bartosTimer_dtype* timer_ptr){
 	u8 status;
 	if(head_timer == NULL){
 		head_timer = timer_ptr;
@@ -71,7 +65,7 @@ static u8 ostimerRegister(bartosTimer_dtype* timer_ptr){
 	return status;
 }
 
-static u8 ostimerCancel(bartosTimer_dtype* timer_ptr){
+u8 ostimerCancel(bartosTimer_dtype* timer_ptr){
 	u8 status = ERROR;
 	if(head_timer == NULL){
 		status = ERROR;

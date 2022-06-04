@@ -5,20 +5,35 @@
 /************************************************************/
 #include "main.h"
 
+binarySemphrHandle_dtype semphr1 = NULL;
+
 void toggleLed1(void){
 	while(1){
-	/* toggle led's state */
-	GPIO_TogglePin('G', P13);
-	BARTOS_delayTask(1000);
-	BARTOS_endTask();
+		if(BARTOS_semaphoreGet(semphr1, 2000) == FALSE){
+			/* do some thing else */
+		}
+		else{
+			/* toggle led's state */
+			GPIO_TogglePin('G', P13);
+			BARTOS_delayTask(1000);
+			GPIO_TogglePin('G', P13);
+			BARTOS_semaphorePut(semphr1);
+		}
 	}
 }
 
 void toggleLed2(void){
 	while(1){
-	/* toggle led's state */
-	GPIO_TogglePin('G', P14);
-	BARTOS_delayTask(1000);
+		if(BARTOS_semaphoreGet(semphr1, 2000) == FALSE){
+			/* do some thing else */
+		}
+		else{
+			/* toggle led's state */
+			GPIO_TogglePin('G', P14);
+			BARTOS_delayTask(1000);
+			GPIO_TogglePin('G', P13);
+			BARTOS_semaphorePut(semphr1);
+		}
 	}
 }
 
@@ -32,7 +47,8 @@ int main(void) {
 	setupIOConfigs();
 	GPIO_WritePin('G', P13, HIGH);
 	GPIO_WritePin('G', P14, HIGH);
-	BARTOS_createTask(toggleLed1, 1);
+	semphr1 = BARTOS_createBinarySemaphore();
+	BARTOS_createTask(toggleLed1, 2);
 	BARTOS_createTask(toggleLed2, 2);
 	while (1) {
 

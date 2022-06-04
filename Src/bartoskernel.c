@@ -117,6 +117,9 @@ u8 BARTOS_createTask(FUNCTION_PTR task, u8 priority){
 			tcbs[task_idx].priority = priority;
 			tcbs[task_idx].state = READY;
 			tcbs[task_idx].task = task;
+			tcbs[task_idx].blocking_semphr_handle = NULL;
+			tcbs[task_idx].semphr_get_status = FALSE;
+			tcbs[task_idx].timer_handler = NULL;
 			osInitTaskStack(task_idx);
 			/* add the task to ready to run tasks queue */
 			status = osEnqueueTcbPriority(&TcbPtrQueueHead, &tcbs[task_idx]);
