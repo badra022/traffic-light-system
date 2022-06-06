@@ -9,6 +9,7 @@
 #include "stdtypes.h"
 #include "macros.h"
 
+#include "port.h"
 #include "bartos.h"
 #include "gpio.h"
 #include "gpt.h"

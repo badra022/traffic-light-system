@@ -12,7 +12,7 @@
 
 #include "queue.h"
 
-Queue_dtype* createQueue(u32* arr, u32 capacity){
+QueueHandler_dtype createQueue(u8* arr, u32 capacity){
 	Queue_dtype* queue_ptr = (Queue_dtype*)malloc(sizeof(Queue_dtype));
 	if(queue_ptr != NULL){
 		queue_ptr->array = arr;
@@ -27,49 +27,86 @@ Queue_dtype* createQueue(u32* arr, u32 capacity){
 	return queue_ptr;
 }
 
-void deleteQueue(Queue_dtype* queue_ptr){
-	free(queue_ptr);
+u8 deleteQueue(QueueHandler_dtype queue_ptr){
+	u8 status;
+	if(queue_ptr == NULL){
+		status = ERR_INVALID_PARAMETER;
+	}
+	else{
+		free(queue_ptr);
+		status = OK;
+	}
+	return status;
 }
 
-u8 isQueueFull(Queue_dtype* queue_ptr){
+u8 isQueueFull(QueueHandler_dtype queue_ptr){
 	return (queue_ptr->size == queue_ptr->capacity);
 }
 
-u8 isQueueEmpty(Queue_dtype* queue_ptr){
+u8 isQueueEmpty(QueueHandler_dtype queue_ptr){
 	return (queue_ptr->size == 0);
 }
 
-void enqueue(Queue_dtype* queue_ptr, u32 item){
+u8 enqueue(QueueHandler_dtype queue_ptr, u8 item){
+	u8 status;
 	if(isQueueFull(queue_ptr)){
-		return;
+		status = ERR_QUEUE;
 	}
 	else{
-		queue_ptr->array[queue_ptr->rear] = item;
 		queue_ptr->rear = (queue_ptr->rear + 1) % queue_ptr->capacity;
 		queue_ptr->size += 1;
+		queue_ptr->array[queue_ptr->rear] = item;
+		status = OK;
 	}
+	return status;
 }
 
-u32 dequeue(Queue_dtype* queue_ptr){
+u8 dequeue(QueueHandler_dtype queue_ptr, u8* return_ptr){
+	u8 status;
 	if(isQueueEmpty(queue_ptr)){
-		return INT_MAX;
+		status = ERR_QUEUE;
 	}
 	else{
-		u32 item = queue_ptr->array[queue_ptr->front];
+		*return_ptr = queue_ptr->array[queue_ptr->front];
 		queue_ptr->front = (queue_ptr->front + 1) % queue_ptr->capacity;
 		queue_ptr->size -= 1;
-		return item;
+		status = OK;
 	}
+	return status;
 }
 
-u32 getQueueFront(Queue_dtype* queue_ptr){
-	return queue_ptr->front;
+u8 getQueueFront(QueueHandler_dtype queue_ptr, u8* return_ptr){
+	u8 status;
+	if(queue_ptr == NULL){
+		status = ERR_INVALID_PARAMETER;
+	}
+	else{
+		*return_ptr = queue_ptr->front;
+		status = OK;
+	}
+	return status;
 }
 
-u32 getQueueRear(Queue_dtype* queue_ptr){
-	return queue_ptr->rear;
+u8 getQueueRear(QueueHandler_dtype queue_ptr, u8* return_ptr){
+	u8 status;
+	if(queue_ptr == NULL){
+		status = ERR_INVALID_PARAMETER;
+	}
+	else{
+		*return_ptr = queue_ptr->rear;
+		status = OK;
+	}
+	return status;
 }
 
-u32 getQueueSize(Queue_dtype* queue_ptr){
-	return queue_ptr->size;
+u8 getQueueSize(QueueHandler_dtype queue_ptr, u8* return_ptr){
+	u8 status;
+	if(queue_ptr == NULL){
+		status = ERR_INVALID_PARAMETER;
+	}
+	else{
+		*return_ptr = queue_ptr->size;
+		status = OK;
+	}
+	return status;
 }

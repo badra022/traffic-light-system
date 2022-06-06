@@ -13,17 +13,19 @@ typedef struct Queue{
 	u32 rear;
 	u32 size;
 	u32 capacity;
-	u32* array;
+	u8* array;
 }Queue_dtype;
 
-Queue_dtype* createQueue(u32* arr, u32 capacity);
-void deleteQueue(Queue_dtype* queue_ptr);
-u8 isQueueFull(Queue_dtype* queue_ptr);
-u8 isQueueEmpty(Queue_dtype* queue_ptr);
-void enqueue(Queue_dtype* queue_ptr, u32 item);
-u32 dequeue(Queue_dtype* queue_ptr);
-u32 getQueueFront(Queue_dtype* queue_ptr);
-u32 getQueueRear(Queue_dtype* queue_ptr);
-u32 getQueueSize(Queue_dtype* queue_ptr);
+typedef Queue_dtype* QueueHandler_dtype;
+
+QueueHandler_dtype createQueue(u8* arr, u32 capacity);
+u8 deleteQueue(QueueHandler_dtype queue_ptr);
+u8 isQueueFull(QueueHandler_dtype queue_ptr);
+u8 isQueueEmpty(QueueHandler_dtype queue_ptr);
+u8 enqueue(QueueHandler_dtype queue_ptr, u8 item);
+u8 dequeue(QueueHandler_dtype queue_ptr, u8* return_ptr);
+u8 getQueueFront(QueueHandler_dtype queue_ptr, u8* return_ptr);
+u8 getQueueRear(QueueHandler_dtype queue_ptr, u8* return_ptr);
+u8 getQueueSize(QueueHandler_dtype queue_ptr, u8* return_ptr);
 
 #endif /* INC_QUEUE_H_ */

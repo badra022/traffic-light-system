@@ -19,6 +19,7 @@ u32 tcb_stack[MAX_NUMBER_OF_TASKS][STD_STACK_SIZE];		/* defines stack of 100 4by
 static tcb_dtype* curr_tcb_ptr = NULL;
 static u32* volatile curr_return_address = NULL;
 static u8 isStarted = 0;
+static u8 osIntCnt = 0;
 
 /* Forward Declaration */
 __attribute__((naked)) void LaunchScheduler(void);
@@ -35,7 +36,34 @@ static u8 osIsQueueEmpty(tcb_dtype** TcbPtrQueueHead_ptr);
  * @return Pointer to the current tcb on execution
  */
 tcb_dtype* osGetCurrentTcb(void){
-	return curr_tcb_ptr;
+	if(osIntCnt == 0){
+		return curr_tcb_ptr;
+	}
+	else{
+		return NULL;
+	}
+}
+
+/*
+ * \b BARTOS_IntEnterRoutine
+ *
+ * This API must be called at the beginning of any interrupt that wish to use BARTOS primitive and may change any task's state
+ *
+ */
+void BARTOS_IntEnterRoutine(void){
+	CRITICAL_SECTION_START();
+	osIntCnt++;
+}
+
+/*
+ * \b BARTOS_IntExitRoutine
+ *
+ * This API must be called at the end of any interrupt that wish to use BARTOS primitive and may change any task's state
+ *
+ */
+void BARTOS_IntExitRoutine(void){
+	CRITICAL_SECTION_END();
+	osIntCnt--;
 }
 
 /*
@@ -120,6 +148,7 @@ u8 BARTOS_createTask(FUNCTION_PTR task, u8 priority){
 			tcbs[task_idx].blocking_semphr_handle = NULL;
 			tcbs[task_idx].semphr_get_status = FALSE;
 			tcbs[task_idx].timer_handler = NULL;
+			tcbs[task_idx].blocking_msg_queue_handle = NULL;
 			osInitTaskStack(task_idx);
 			/* add the task to ready to run tasks queue */
 			status = osEnqueueTcbPriority(&TcbPtrQueueHead, &tcbs[task_idx]);

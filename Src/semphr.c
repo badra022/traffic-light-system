@@ -115,7 +115,7 @@ u8 BARTOS_semaphorePut(semphrHandler_dtype handle){
 	return status;
 }
 
-static void osBlockCallBack(void* tcb_void_ptr){
+static void osSemphrBlockCallBack(void* tcb_void_ptr){
 	/* if the ticks expire, add the tcb to the ready queue */
 	/* remove the tcb from the blocking queue of the suspending semaphore */
 	tcb_dtype* tcb_ptr = (tcb_dtype*)tcb_void_ptr;
@@ -142,7 +142,7 @@ static void osBinarySemphrBlockTask(semphrHandler_dtype semphr_handle, u32 ticks
 	curr_tcb_ptr->blocking_semphr_handle = (u32*)semphr_handle;
 	curr_tcb_ptr->timer_handler = (u32*)newTimer_ptr;
 
-	newTimer_ptr->function_ptr = osBlockCallBack;
+	newTimer_ptr->function_ptr = osSemphrBlockCallBack;
 	newTimer_ptr->callback_args = (void*)curr_tcb_ptr;
 	newTimer_ptr->u32Ticks = ticks;
 

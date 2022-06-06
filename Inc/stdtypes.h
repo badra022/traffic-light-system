@@ -41,11 +41,14 @@ typedef double                float64;
 #define OK		0
 #define ERROR	1
 #define ERR_INVALID_PARAMETER		2
-#define ERR_INVALID_ARR_INDEX				15
+#define ERR_INVALID_ARR_INDEX		15
 #define ERR_ENQUEUE					20
 #define ERR_DEQUEUE					21
 #define ERR_EMPTY_QUEUE				22
+#define ERR_FULL_QUEUE				23
+#define ERR_QUEUE					24
 #define ERR_FAILED_TO_PERFORM		50
+#define ERR_TIMEOUT					100
 
 
 #define MAX_UNSIGNED_CHARACTER		(u8)(~0)

@@ -10,7 +10,8 @@
 #ifndef INC_UART_H_
 #define INC_UART_H_
 
-
+#define _USART1_VECTOR_IRQ		37
+#define _USART2_VECTOR_IRQ		38
 
 typedef enum{
 	EIGHT,

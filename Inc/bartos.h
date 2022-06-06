@@ -26,11 +26,17 @@ typedef struct Tcb{
 	u32*			blocking_semphr_handle;
 	u8				semphr_get_status;
 	u32*			timer_handler;
+	u32*			blocking_msg_queue_handle;
+	u8				msg_status;
+	u8				block_wake_status;
+	u8				suspend_wake_status;
 }tcb_dtype;
 
 extern tcb_dtype* TcbPtrQueueHead;
 
 tcb_dtype* osGetCurrentTcb(void);
+void BARTOS_IntEnterRoutine(void);
+void BARTOS_IntExitRoutine(void);
 u8 osIsStarted(void);
 u8 osResumeTask(tcb_dtype* tcb_ptr);
 u8 BARTOS_createTask(FUNCTION_PTR task, u8 priority);
@@ -43,6 +49,7 @@ tcb_dtype* osDequeueTcbHead(tcb_dtype** TcbPtrQueueHead_ptr);
 
 #include "bartostimer.h"
 #include <semphr.h>
+#include <msgqueue.h>
 
 
 #endif /* INC_BARTOS_H_ */
