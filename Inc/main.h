@@ -16,12 +16,15 @@
 #include "nvic.h"
 #include "rcc.h"
 #include "uart.h"
+#include "PWM.h"
+#include "ADC.h"
 
 /*****************************************************************************/
 /***********************    APPLICATION APIs     *****************************/
 /*****************************************************************************/
-void APP_toggleLedTaskSetup(void);
-void APP_toggleLed(void);
-void APP_setupIOConfigs(void);
+#define GREEN		0
+#define EMERGENCY	20
+#define YELLOW		1
+#define RED			2
 
 #endif /* INC_MAIN_H_ */

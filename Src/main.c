@@ -5,23 +5,34 @@
 /************************************************************/
 #include "main.h"
 
-#define GREEN		0
-#define EMERGENCY	20
-#define YELLOW		1
-#define RED			2
 
+
+/***************************************Global variables*******************************************/
 u8 system_state = GREEN;
 u8 rfid_rcv_buffer[100];
 msgQueueHandler_dtype rfid_rcv_queue;
 
-void USART1_IRQHandler(void){
-	BARTOS_IntEnterRoutine();
 
-	BARTOS_QueuePut(rfid_rcv_queue, -1, USART1_u8ReceiveCharacter());
 
-	BARTOS_IntExitRoutine();
-}
 
+
+/**************************************Forward declaration******************************************/
+void setup_io_configs(void);
+void setup_uart1_configs(void);
+void setup_pwm_leds_configs(void);	/* helal */
+void setup_adc_button_configs(void);	/* yehia */
+void setup_seven_segment_io_configs(void);
+u8 get_button_adc_read(void);			/* yehia */
+void set_led1_on(void);		/* helal */
+void set_led2_on(void);		/* helal */
+void set_led3_on(void);		/* helal */
+void set_led1_off(void);	/* helal */
+void set_led2_off(void);	/* helal */
+void set_led3_off(void);	/* helal */
+
+
+
+/***************************************OS Tasks****************************************************/
 void checkEmergencyTask(void){
 	u8 rcvd_data;
 	while(TRUE){
@@ -35,6 +46,31 @@ void checkEmergencyTask(void){
 	}
 }
 
+
+
+
+
+/****************************************Entry Point*******************************************/
+int main(void) {
+	RCC_initSystemClock();
+	setup_io_configs();
+	setup_uart1_configs();
+	rfid_rcv_queue = BARTOS_createQueue(rfid_rcv_buffer, 100);
+	BARTOS_createTask(checkEmergencyTask, 2);
+
+	while (1) {
+
+		/* start the rtos */
+		BARTOS_start();
+	}
+	return 0;
+}
+
+
+
+
+
+/**************************************Application setup fucntions************************************/
 
 void setup_io_configs(void){
 	/* setup I/O configs */
@@ -73,16 +109,80 @@ void setup_uart1_configs(void){
 	USART1_voidInit(&Uart1_config);
 }
 
-int main(void) {
-	setup_io_configs();
-	setup_uart1_configs();
-	rfid_rcv_queue = BARTOS_createQueue(rfid_rcv_buffer, 100);
-	BARTOS_createTask(checkEmergencyTask, 2);
+void USART1_IRQHandler(void){
+	BARTOS_IntEnterRoutine();
 
-	while (1) {
+	BARTOS_QueuePut(rfid_rcv_queue, -1, USART1_u8ReceiveCharacter());
 
-		/* start the rtos */
-		BARTOS_start();
-	}
-	return 0;
+	BARTOS_IntExitRoutine();
+}
+
+
+/*
+ * \b setup_pwm_leds_configs
+ *
+ * This function should attach 3 leds to 3 pwm channels.
+ *
+ * all channels' frequency are 100HZ
+ *
+ * led is ON using 70% duty cycle
+ *
+ */
+void setup_pwm_leds_configs(void){
+
+
+}
+
+/*
+ * \b setup_adc_button_configs
+ *
+ * This function should attach a user button to an ADC channel
+ */
+void setup_adc_button_configs(void){
+
+
+}
+
+
+/*
+ * \b get_button_adc_read
+ *
+ * This function should return ON when the ADC value read from the button is between 2 and 5 volts.
+ * return OFF otherwise.
+ *
+ */
+u8 get_button_adc_read(void){
+
+}
+
+/*
+ * set_ledx_on
+ *
+ * This function should set the corresponding led to ON (70% dutycycle)
+ *
+ */
+void set_led1_on(void){
+
+}
+void set_led2_on(void){
+
+}
+void set_led3_on(void){
+
+}
+
+/*
+ * set_ledx_on
+ *
+ * This function should set the corresponding led to OFF (0% dutycycle)
+ *
+ */
+void set_led1_off(void){
+
+}
+void set_led2_off(void){
+
+}
+void set_led3_off(void){
+
 }
