@@ -18,13 +18,7 @@
 #include "uart.h"
 #include "PWM.h"
 #include "ADC.h"
+#include "svn_segment.h"
 
-/*****************************************************************************/
-/***********************    APPLICATION APIs     *****************************/
-/*****************************************************************************/
-#define GREEN		0
-#define EMERGENCY	20
-#define YELLOW		1
-#define RED			2
 
 #endif /* INC_MAIN_H_ */
