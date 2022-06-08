@@ -14,7 +14,7 @@
 
 #define ARR_VALUE (1000)
 
-void PWM_INIT(Gptim2_5_dtype* timer, u8 channel_no, u16 prescaler, u32 duty_cycle);
+void PWM_INIT(Gptim2_5_dtype* timer, u8 channel_no, u16 prescaler, u32 duty_cycle, u32 preload);
 void PWM_ChangeDutycycle(Gptim2_5_dtype* timer, u8 channel_no, u8 duty_cycle);
 void PWM_START_TIMER(Gptim2_5_dtype* timer);
 

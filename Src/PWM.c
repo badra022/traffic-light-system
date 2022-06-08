@@ -13,9 +13,12 @@
 #include "gpt.h"
 #include "PWM.h"
 
+static u32 preload_value = 0;
 /*duty cycle is from (0 - 100) and this means 10% , 20% and so on*/
 
-void PWM_INIT(Gptim2_5_dtype* timer, u8 channel_no, u16 prescaler, u32 duty_cycle){
+void PWM_INIT(Gptim2_5_dtype* timer, u8 channel_no, u16 prescaler, u32 duty_cycle, u32 preload){
+
+	preload_value = preload;
 
 	if( (duty_cycle <= 100) && (duty_cycle >= 0)){
 			/*pass it's ok*/
@@ -39,7 +42,7 @@ void PWM_INIT(Gptim2_5_dtype* timer, u8 channel_no, u16 prescaler, u32 duty_cycl
 	timer->CCER |= (1 << ((channel_no - 1)*4));
 
 	/*SET ARR AND PRESCALER*/
-	timer->ARR = ARR_VALUE;
+	timer->ARR = preload_value;
 	timer->PSC |=  prescaler - 1;
 
 
@@ -113,15 +116,21 @@ void PWM_START_TIMER(Gptim2_5_dtype* timer){
 }
 
 
+static void PWM_STOP_TIMER(Gptim2_5_dtype* timer){
+	timer->CR1 &= ~(0x01 << 0);
+}
+
 
 void PWM_ChangeDutycycle(Gptim2_5_dtype* timer, u8 channel_no, u8 duty_cycle){
 
+	PWM_STOP_TIMER(timer);
 	volatile u32* channels_CCR[4] = {&(timer-> CCR1),&(timer-> CCR2),&(timer-> CCR3),&(timer-> CCR4)};
 
 	if( (duty_cycle <= 100) && (duty_cycle >= 0)){
-		*channels_CCR[channel_no - 1] = (ARR_VALUE * duty_cycle) / 100;
+		*channels_CCR[channel_no - 1] = (preload_value * duty_cycle) / 100;
 	}
 	else{
 		/*pass leave duty cycle as it is*/
 	}
+	PWM_START_TIMER(timer);
 }

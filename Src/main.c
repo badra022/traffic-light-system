@@ -22,16 +22,16 @@ u8 pedestrain_button_poller_enable = TRUE;
 /**************************************Forward declaration******************************************/
 void setup_io_configs(void);
 void setup_uart1_configs(void);
-void setup_pwm_leds_configs(void);	/* helal */
+void setup_pwm_leds_configs(void);
 void setup_adc_button_configs(void);	/* yehia */
 void setup_seven_segment_io_configs(void);
 u8 get_button_adc_read(void);			/* yehia */
-void set_led1_on(void);		/* helal */
-void set_led2_on(void);		/* helal */
-void set_led3_on(void);		/* helal */
-void set_led1_off(void);	/* helal */
-void set_led2_off(void);	/* helal */
-void set_led3_off(void);	/* helal */
+void set_led1_on(void);
+void set_led2_on(void);
+void set_led3_on(void);
+void set_led1_off(void);
+void set_led2_off(void);
+void set_led3_off(void);
 void manageSystemStates(void);
 void postPedestrianStateTask(void);
 void pedestrianStateTask(void);
@@ -253,7 +253,17 @@ void USART1_IRQHandler(void){
  */
 void setup_pwm_leds_configs(void){
 
-
+	RCC_voidEnableClock(RCC_APB1, _TIM5_RCC_ID);
+	PWM_INIT(TIM5, 3, 1, 0, RCC_u32GetSystemClock() / 100);		// 100HZ pwm output on TIM5_CH1 with preset duty cycle
+	PWM_INIT(TIM5, 3, 2, 0, RCC_u32GetSystemClock() / 100);		// 100HZ pwm output on TIM5_CH2 with preset duty cycle
+	PWM_INIT(TIM5, 3, 3, 0, RCC_u32GetSystemClock() / 100);		// 100HZ pwm output on TIM5_CH3 with preset duty cycle
+	GPIO_Init('A', P0, ALTERNATE_FUN, PUSH_PULL, NO_PULLING);
+	GPIO_Init('A', P1, ALTERNATE_FUN, PUSH_PULL, NO_PULLING);
+	GPIO_Init('A', P2, ALTERNATE_FUN, PUSH_PULL, NO_PULLING);
+	GPIO_setAlternateFunction('A', P0, AF2);
+	GPIO_setAlternateFunction('A', P1, AF2);
+	GPIO_setAlternateFunction('A', P2, AF2);
+	PWM_START_TIMER(TIM5);				// start pwm
 }
 
 /*
@@ -285,29 +295,29 @@ u8 get_button_adc_read(void){
  *
  */
 void set_led1_on(void){
-
+	PWM_ChangeDutycycle(TIM0, 1, 70);
 }
 void set_led2_on(void){
-
+	PWM_ChangeDutycycle(TIM0, 1, 70);
 }
 void set_led3_on(void){
-
+	PWM_ChangeDutycycle(TIM0, 1, 70);
 }
 
 /*
- * set_ledx_on
+ * set_ledx_off
  *
  * This function should set the corresponding led to OFF (0% dutycycle)
  *
  */
 void set_led1_off(void){
-
+	PWM_ChangeDutycycle(TIM0, 1, 0);
 }
 void set_led2_off(void){
-
+	PWM_ChangeDutycycle(TIM0, 1, 0);
 }
 void set_led3_off(void){
-
+	PWM_ChangeDutycycle(TIM0, 1, 0);
 }
 
 void setup_seven_segment_io_configs(void){
