@@ -272,8 +272,7 @@ void setup_pwm_leds_configs(void){
  * This function should attach a user button to an ADC channel
  */
 void setup_adc_button_configs(void){
-
-
+	ADC_init();
 }
 
 
@@ -285,7 +284,15 @@ void setup_adc_button_configs(void){
  *
  */
 u8 get_button_adc_read(void){
-
+	u8 value = ADC_GetValue(5);
+	u8 result;
+	if(value >= 100 && value <= 255){
+		result = HIGH;
+	}
+	else{
+		result = LOW;
+	}
+	return result;
 }
 
 /*
@@ -295,13 +302,13 @@ u8 get_button_adc_read(void){
  *
  */
 void set_led1_on(void){
-	PWM_ChangeDutycycle(TIM0, 1, 70);
+	PWM_ChangeDutycycle(TIM2, 1, 70);
 }
 void set_led2_on(void){
-	PWM_ChangeDutycycle(TIM0, 1, 70);
+	PWM_ChangeDutycycle(TIM2, 2, 70);
 }
 void set_led3_on(void){
-	PWM_ChangeDutycycle(TIM0, 1, 70);
+	PWM_ChangeDutycycle(TIM2, 3, 70);
 }
 
 /*
@@ -311,13 +318,13 @@ void set_led3_on(void){
  *
  */
 void set_led1_off(void){
-	PWM_ChangeDutycycle(TIM0, 1, 0);
+	PWM_ChangeDutycycle(TIM2, 1, 0);
 }
 void set_led2_off(void){
-	PWM_ChangeDutycycle(TIM0, 1, 0);
+	PWM_ChangeDutycycle(TIM2, 2, 0);
 }
 void set_led3_off(void){
-	PWM_ChangeDutycycle(TIM0, 1, 0);
+	PWM_ChangeDutycycle(TIM2, 3, 0);
 }
 
 void setup_seven_segment_io_configs(void){

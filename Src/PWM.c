@@ -58,7 +58,7 @@ void PWM_INIT(Gptim2_5_dtype* timer, u8 channel_no, u16 prescaler, u32 duty_cycl
 			timer->CCMR1 |= (0x01 << 3);
 
 			/*set duty cycle*/
-			timer-> CCR1 = (ARR_VALUE * duty_cycle) / 100;
+			timer-> CCR1 = (preload * duty_cycle) / 100;
 
 		}
 		break;
@@ -72,7 +72,7 @@ void PWM_INIT(Gptim2_5_dtype* timer, u8 channel_no, u16 prescaler, u32 duty_cycl
 			timer->CCMR1 |= (0x01 << 11);
 
 			/*set duty cycle*/
-			timer-> CCR2 = (ARR_VALUE * duty_cycle) / 100;
+			timer-> CCR2 = (preload * duty_cycle) / 100;
 		}
 		break;
 		case 3:
@@ -85,7 +85,7 @@ void PWM_INIT(Gptim2_5_dtype* timer, u8 channel_no, u16 prescaler, u32 duty_cycl
 			timer->CCMR2 |= (0x01 << 3);
 
 			/*set duty cycle*/
-			timer-> CCR3 = (ARR_VALUE * duty_cycle) / 100;
+			timer-> CCR3 = (preload * duty_cycle) / 100;
 		}
 		break;
 		case 4:
@@ -98,7 +98,7 @@ void PWM_INIT(Gptim2_5_dtype* timer, u8 channel_no, u16 prescaler, u32 duty_cycl
 			timer->CCMR2 |= (0x01 << 11);
 
 			/*set duty cycle*/
-			timer-> CCR4 = (ARR_VALUE * duty_cycle) / 100;
+			timer-> CCR4 = (preload * duty_cycle) / 100;
 		}
 		break;
 
