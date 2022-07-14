@@ -9,6 +9,7 @@
 #include "macros.h"
 #include "port.h"
 
+#include "gpio.h"
 #include "rcc.h"
 #include "ADC.h"
 
@@ -17,10 +18,11 @@ void ADC_init()
 {
 
 	RCC_voidEnableClock(RCC_APB2, 8);			// EN ADC CLCK
+	GPIO_Init('A', P5, ANALOG, PUSH_PULL, NO_PULLING);
 
 	ADC_SR = 0x00;
 	ADC_CR1 |= ( 0x10 << ADC_RES ); 				// RESOLUTION 8 BIT
-	ADC_CR2 |= ( 0x01 << ADC_ADON ) | ( 0x01 << ADC_CONT ); 	// continous mode and enable adc
+	ADC_CR2 |= ( 0x01 << ADC_ADON ) | ( 0x00 << ADC_CONT ); 	// continous mode and enable adc
 	ADC_CR2 |= ( 0x01 << ADC_EOCS ); 				// End of conversion selection flag
 	ADC_SMPR2 |= ( 0x01 << 15 ) ; // channel5 sampling time is 15 APB2 cycle
 	ADC_SQR3  |= ( 0x01 << 2 ) | ( 0x01 << 0 ); // choosing channel5 as first sequence

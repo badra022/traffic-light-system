@@ -1,7 +1,7 @@
 /************************************************************/
 /*********** Author		: Ahmed Mohamed Badra	*************/
-/*********** Date		: 13/3/2022				*************/
-/*********** Version	: V01					*************/
+/*********** Date		: 8/6/2022				*************/
+/*********** Version	: V02					*************/
 /************************************************************/
 #include "main.h"
 
@@ -23,9 +23,9 @@ u8 pedestrain_button_poller_enable = TRUE;
 void setup_io_configs(void);
 void setup_uart1_configs(void);
 void setup_pwm_leds_configs(void);
-void setup_adc_button_configs(void);	/* yehia */
+void setup_adc_button_configs(void);
 void setup_seven_segment_io_configs(void);
-u8 get_button_adc_read(void);			/* yehia */
+u8 get_button_adc_read(void);
 void set_led1_on(void);
 void set_led2_on(void);
 void set_led3_on(void);
@@ -114,12 +114,12 @@ void pedestrianStateTask(void){		// 5
 		BARTOS_delayTask(1000);		/* 1 second */
 	}
 	CRITICAL_SECTION_START();
-	manageSystemStates();
 	BARTOS_createTask(postPedestrianStateTask, 5);
 	BARTOS_endTask();
 }
 
 void postPedestrianStateTask(void){		// 5
+	pedestrain_button_poller_enable = TRUE;
 	BARTOS_delayTask(10000);		/* 10 seconds */
 	if(pedestrian_request == TRUE){
 		emergency = FALSE;
@@ -127,6 +127,7 @@ void postPedestrianStateTask(void){		// 5
 	else{
 		/* no pedestrain request happpened in past 10 seconds */
 	}
+	manageSystemStates();
 	BARTOS_endTask();
 }
 
@@ -160,6 +161,9 @@ int main(void) {
 	rfid_rcv_queue = BARTOS_createQueue(rfid_rcv_buffer, 100);
 	BARTOS_createTask(checkEmergencyTask, 2);
 	BARTOS_createTask(checkPedestrianRequestTask, 2);
+
+
+
 	BARTOS_createTask(sevenSegmentDisplayTask, 3);
 
 	while (1) {
@@ -192,7 +196,7 @@ void setup_uart1_configs(void){
 
 	Uart1_config.parity.enable = 					DISABLE;
 	Uart1_config.parity.type = 						EVEN;
-	Uart1_config.over_eight = 						DISABLE;
+	Uart1_config.over_eight = 						ENABLE;
 	Uart1_config.clock_phase = 						FIRST_CLOCK;
 	Uart1_config.clock_polarity = 					STEADY_LOW;
 	Uart1_config.clock_synch = 						DISABLE;
@@ -222,17 +226,18 @@ void USART1_IRQHandler(void){
 	char_idx++;
 	if(char_idx >= 3){
 		char_idx = 0;
-		if(rfid_frame[0] == 0xaa && rfid_frame[2] == 0x55){
-			if(rfid_frame[1] == 0x02 || rfid_frame[1] == 0x03){
-				BARTOS_QueuePut(rfid_rcv_queue, -1, rfid_frame[1]);
-			}
-			else{
-				/* Car type is not emergency */
-			}
-		}
-		else{
-			/* Frame received is not an RFID frame as the Header and Tail does not match */
-		}
+		BARTOS_QueuePut(rfid_rcv_queue, -1, rfid_frame[1]);
+//		if(rfid_frame[0] == 'a' && rfid_frame[2] == 'b'){		/* check if it's an RFID frame */
+//			if(rfid_frame[1] == 0x02 || rfid_frame[1] == 0x03){		/* check if it's emergency vehicle */
+//				BARTOS_QueuePut(rfid_rcv_queue, -1, rfid_frame[1]);
+//			}
+//			else{
+//				/* Car type is not emergency */
+//			}
+//		}
+//		else{
+//			/* Frame received is not an RFID frame as the Header and Tail does not match */
+//		}
 	}
 	else{
 		/* Frame is not fully received */
@@ -254,9 +259,9 @@ void USART1_IRQHandler(void){
 void setup_pwm_leds_configs(void){
 
 	RCC_voidEnableClock(RCC_APB1, _TIM5_RCC_ID);
-	PWM_INIT(TIM5, 3, 1, 0, RCC_u32GetSystemClock() / 100);		// 100HZ pwm output on TIM5_CH1 with preset duty cycle
-	PWM_INIT(TIM5, 3, 2, 0, RCC_u32GetSystemClock() / 100);		// 100HZ pwm output on TIM5_CH2 with preset duty cycle
-	PWM_INIT(TIM5, 3, 3, 0, RCC_u32GetSystemClock() / 100);		// 100HZ pwm output on TIM5_CH3 with preset duty cycle
+	PWM_INIT(TIM5, 3, 1, 0, RCC_u32GetSystemClock() / 100000);		// 100HZ pwm output on TIM5_CH1 with preset duty cycle
+	PWM_INIT(TIM5, 3, 2, 0, RCC_u32GetSystemClock() / 100000);		// 100HZ pwm output on TIM5_CH2 with preset duty cycle
+	PWM_INIT(TIM5, 3, 3, 0, RCC_u32GetSystemClock() / 100000);		// 100HZ pwm output on TIM5_CH3 with preset duty cycle
 	GPIO_Init('A', P0, ALTERNATE_FUN, PUSH_PULL, NO_PULLING);
 	GPIO_Init('A', P1, ALTERNATE_FUN, PUSH_PULL, NO_PULLING);
 	GPIO_Init('A', P2, ALTERNATE_FUN, PUSH_PULL, NO_PULLING);
@@ -273,6 +278,7 @@ void setup_pwm_leds_configs(void){
  */
 void setup_adc_button_configs(void){
 	ADC_init();
+	GPIO_Init('A', P5, INPUT, PUSH_PULL, NO_PULLING);
 }
 
 
@@ -284,14 +290,15 @@ void setup_adc_button_configs(void){
  *
  */
 u8 get_button_adc_read(void){
-	u8 value = ADC_GetValue(5);
-	u8 result;
-	if(value >= 100 && value <= 255){
-		result = HIGH;
-	}
-	else{
-		result = LOW;
-	}
+//	u8 value = ADC_GetValue(5);
+	u8 result = GPIO_ReadPin('A', P5);
+//	u8 result;
+//	if(value >= 100 && value <= 255){
+//		result = HIGH;
+//	}
+//	else{
+//		result = LOW;
+//	}
 	return result;
 }
 

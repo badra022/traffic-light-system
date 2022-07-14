@@ -16,7 +16,6 @@
 #include "nvic.h"
 #include "rcc.h"
 #include "uart.h"
-#include "gpt.h"
 #include "PWM.h"
 #include "ADC.h"
 #include "svn_segment.h"
